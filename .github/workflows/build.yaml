@@ -2,7 +2,7 @@ name: Build Project
 
 on:
   push:
-    branches: [main]
+    branches: [201-workflows-enhancement]
   pull_request:
     branches: [main]
 
@@ -16,11 +16,27 @@ jobs:
     name: Build project - rust ${{ matrix.toolchain }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
+
       - name: Setup Rust toolchain
-        run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
-      - name: Build workspace (excluding openrpc-testgen/openrpc-testgen-runner)
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.toolchain }}
+          override: true
+
+      - name: Build workspace
         run: |
           cargo build --all --all-features --exclude openrpc-testgen --exclude openrpc-testgen-runner
+
       - name: Build openrpc-testgen/openrpc-testgen-runner
         run: |
           cargo build -p openrpc-testgen -p openrpc-testgen-runner --features "openrpc katana katana_no_fee katana_no_mining katana_no_account_validation"
