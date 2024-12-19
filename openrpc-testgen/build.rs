@@ -185,14 +185,11 @@ fn process_module_directory(
 
         writeln!(
             file,
-            "        if let Err(nested_failed_tests) = {}::{}::{}::run(&data).await {{
-                if let crate::utils::v7::endpoints::errors::OpenRpcTestGenError::TestSuiteFailure {{ failed_tests: nested }} = nested_failed_tests {{
-                    failed_tests.extend(nested);
-                }}
+            "        if let Err(crate::utils::v7::endpoints::errors::OpenRpcTestGenError::TestSuiteFailure {{ failed_tests: nested }}) = {}::{}::{}::run(&data).await {{
+                failed_tests.extend(nested);
             }}",
             module_prefix, nested_suite, nested_struct_name
-        )
-        .unwrap();
+        ).unwrap();
     }
 
     writeln!(
