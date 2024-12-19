@@ -185,14 +185,11 @@ fn process_module_directory(
 
         writeln!(
             file,
-            "        if let Err(nested_failed_tests) = {}::{}::{}::run(&data).await {{
-                if let crate::utils::v7::endpoints::errors::OpenRpcTestGenError::TestSuiteFailure {{ failed_tests: nested }} = nested_failed_tests {{
-                    failed_tests.extend(nested);
-                }}
+            "        if let Err(crate::utils::v7::endpoints::errors::OpenRpcTestGenError::TestSuiteFailure {{ failed_tests: nested }}) = {}::{}::{}::run(&data).await {{
+                failed_tests.extend(nested);
             }}",
             module_prefix, nested_suite, nested_struct_name
-        )
-        .unwrap();
+        ).unwrap();
     }
 
     writeln!(
@@ -232,20 +229,6 @@ fn partition_modules(mod_file_path: &Path) -> (Vec<String>, Vec<String>) {
                     nested_suites.push(mod_name);
                 } else if mod_name.starts_with("test_") {
                     test_cases.push(mod_name);
-                }
-            }
-        }
-    }
-
-    if let Some(parent_dir) = mod_file_path.parent() {
-        for entry in fs::read_dir(parent_dir).expect("Could not read directory") {
-            let entry = entry.expect("Could not read directory entry");
-            let path = entry.path();
-            if path.is_dir() {
-                if let Some(name) = path.file_name().and_then(|n| n.to_str()) {
-                    if name.starts_with("suite_") && !nested_suites.contains(&name.to_string()) {
-                        nested_suites.push(name.to_string());
-                    }
                 }
             }
         }
