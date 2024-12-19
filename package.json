@@ -10,6 +10,7 @@
     "prettier:write": "npx prettier --plugin prettier-plugin-toml --write '**/*.{js,jsx,ts,tsx,json,css,scss,yaml,toml,md}'"
   },
   "devDependencies": {
-    "prettier-plugin-toml": "2.0.1"
+    "prettier": "^3.4.2",
+    "prettier-plugin-toml": "^2.0.1"
   }
 }

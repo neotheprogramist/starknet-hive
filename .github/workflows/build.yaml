@@ -18,5 +18,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Setup Rust toolchain
         run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
-      - name: Build project
-        run: cargo build --all --all-features
+      - name: Build workspace (excluding openrpc-testgen/openrpc-testgen-runner)
+        run: |
+          cargo build --all --all-features --exclude openrpc-testgen --exclude openrpc-testgen-runner
+      - name: Build openrpc-testgen/openrpc-testgen-runner
+        run: |
+          cargo build -p openrpc-testgen -p openrpc-testgen-runner --features "openrpc katana katana_no_fee katana_no_mining katana_no_account_validation"
