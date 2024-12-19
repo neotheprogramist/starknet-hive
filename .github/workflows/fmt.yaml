@@ -32,6 +32,10 @@ jobs:
         with:
           toolchain: ${{ matrix.toolchain }}
           override: true
+      
+      - name: Check Rust version
+        run: rustc --version && cargo clippy --version
+
 
       - name: Check code formatting with cargo fmt
         run: cargo fmt -- --check

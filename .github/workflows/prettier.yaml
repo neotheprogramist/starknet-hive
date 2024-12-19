@@ -2,7 +2,7 @@ name: Prettier Code Format Check
 
 on:
   push:
-    branches: [main]
+    branches: [201-workflows-enhancement]
   pull_request:
     branches: [main]
 
@@ -13,11 +13,22 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
           node-version: "22"
+
       - name: Install dependencies
-        run: npm install
+        run: npm ci
+
       - name: Run Prettier
         run: npx prettier --plugin prettier-plugin-toml --check '**/*.{js,jsx,ts,tsx,json,css,scss,yaml,toml,md}'
