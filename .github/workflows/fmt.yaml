@@ -2,43 +2,35 @@ name: Code Quality Checks
 
 on:
   push:
-    branches: [201-workflows-enhancement]
+    branches: [main]
   pull_request:
     branches: [main]
 
 jobs:
-  code_quality:
+  cargo_fmt:
     runs-on: ubuntu-latest
     strategy:
       matrix:
         toolchain:
           - stable
-    name: Code Quality Checks - rust ${{ matrix.toolchain }}
+    name: Run cargo fmt - rust ${{ matrix.toolchain }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Cache Rust dependencies
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-
       - name: Setup Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: ${{ matrix.toolchain }}
-          override: true
-      
-      - name: Check Rust version
-        run: rustc --version && cargo clippy --version
-
-
+        run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
       - name: Check code formatting with cargo fmt
         run: cargo fmt -- --check
 
+  cargo_clippy:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        toolchain:
+          - stable
+    name: Run cargo clippy - rust ${{ matrix.toolchain }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup Rust toolchain
+        run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
       - name: Lint code with cargo clippy
         run: cargo clippy -- -D warnings
