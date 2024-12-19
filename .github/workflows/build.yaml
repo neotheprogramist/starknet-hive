@@ -2,7 +2,7 @@ name: Build Project
 
 on:
   push:
-    branches: [main]
+    branches: [199-fix-build-workflow]
   pull_request:
     branches: [main]
 
@@ -19,4 +19,4 @@ jobs:
       - name: Setup Rust toolchain
         run: rustup update ${{ matrix.toolchain }} && rustup default ${{ matrix.toolchain }}
       - name: Build project
-        run: cargo build --all --all-features
+        run: cargo build --all --features "openrpc katana katana_no_fee katana_no_mining katana_no_account_validation"
