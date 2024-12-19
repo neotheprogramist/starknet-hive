@@ -2,7 +2,7 @@ name: Build Project
 
 on:
   push:
-    branches: [201-workflows-enhancement]
+    branches: [main]
   pull_request:
     branches: [main]
 
