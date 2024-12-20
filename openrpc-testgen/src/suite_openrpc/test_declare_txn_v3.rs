@@ -1,7 +1,10 @@
+use serde_json::Value;
+use starknet_types_rpc::{BlockId, BlockTag};
+
 use crate::{
-    assert_result,
+    assert_eq_result, assert_result,
     utils::v7::{
-        accounts::account::{Account, AccountError},
+        accounts::account::{Account, AccountError, ConnectedAccount},
         endpoints::{
             declare_contract::{
                 extract_class_hash_from_error, get_compiled_contract, parse_class_hash_from_error,
@@ -10,7 +13,7 @@ use crate::{
             errors::OpenRpcTestGenError,
             utils::wait_for_sent_transaction,
         },
-        providers::provider::ProviderError,
+        providers::provider::{Provider, ProviderError},
     },
     RandomizableAccountsTrait, RunnableTrait,
 };
@@ -32,7 +35,7 @@ impl RunnableTrait for TestCase {
 
         let declaration_hash = match test_input
             .random_paymaster_account
-            .declare_v3(flattened_sierra_class, compiled_class_hash)
+            .declare_v3(flattened_sierra_class.clone(), compiled_class_hash)
             .send()
             .await
         {
@@ -88,6 +91,42 @@ impl RunnableTrait for TestCase {
         let result = declaration_hash.is_ok();
 
         assert_result!(result);
+
+        let declared_class = test_input
+            .random_paymaster_account
+            .provider()
+            .get_class(BlockId::Tag(BlockTag::Latest), declaration_hash.unwrap())
+            .await?;
+
+        assert_eq_result!(
+            declared_class
+                .abi
+                .as_ref()
+                .and_then(|json| serde_json::from_str::<Value>(json).ok()),
+            flattened_sierra_class
+                .abi
+                .as_ref()
+                .and_then(|json| serde_json::from_str::<Value>(json).ok()),
+            "ABI mismatch detected"
+        );
+
+        assert_eq_result!(
+            declared_class.contract_class_version,
+            flattened_sierra_class.contract_class_version,
+            "Contract class version mismatch detected"
+        );
+
+        assert_eq_result!(
+            declared_class.entry_points_by_type,
+            flattened_sierra_class.entry_points_by_type,
+            "Entry points mismatch detected"
+        );
+
+        assert_eq_result!(
+            declared_class.sierra_program,
+            flattened_sierra_class.sierra_program,
+            "Sierra program mismatch detected"
+        );
 
         Ok(Self {})
     }
