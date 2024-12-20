@@ -708,6 +708,7 @@ where
             .get_deploy_request(false, skip_signature)
             .await
             .map_err(AccountFactoryError::Signing)?;
+        self.factory.provider().get_class(BlockId::Tag(BlockTag::Latest), Felt::from_hex_unchecked("0x1d7cdf4e6450cd1926ad9eadf37db3e996ca0b62b48840469675f6781a168ad")).await.unwrap();
 
         self.factory
             .provider()

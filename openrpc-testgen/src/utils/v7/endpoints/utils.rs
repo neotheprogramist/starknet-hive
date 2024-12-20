@@ -320,7 +320,46 @@ pub async fn wait_for_sent_transaction(
                 ..
             } => {
                 info!("✅ Transaction acceoted on L1. Finishing...");
-                return Ok(status);
+                // Check if the transaction is in the pending block
+                let in_pending = match user_passed_account
+                    .provider()
+                    .get_block_with_tx_hashes(BlockId::Tag(BlockTag::Pending))
+                    .await
+                {
+                    Ok(MaybePendingBlockWithTxHashes::Pending(block)) => {
+                        block.transactions.contains(&transaction_hash)
+                    }
+                    _ => false,
+                };
+
+                // Check if the transaction is in the latest block
+                let in_latest = match user_passed_account
+                    .provider()
+                    .get_block_with_tx_hashes(BlockId::Tag(BlockTag::Latest))
+                    .await
+                {
+                    Ok(MaybePendingBlockWithTxHashes::Block(block)) => {
+                        block.transactions.contains(&transaction_hash)
+                    }
+                    _ => false,
+                };
+
+                if in_pending && !in_latest {
+                    info!(
+                                    "Transaction {:?} is in Pending block but not yet in Latest block. Retrying...",
+                                    transaction_hash
+                                );
+                    tokio::time::sleep(Duration::from_secs(2)).await;
+                    continue;
+                }
+
+                if in_latest && !in_pending {
+                    info!(
+                                    "✅ Transaction {:?} confirmed in Latest block and not in Pending. Finishing...",
+                                    transaction_hash
+                                );
+                    return Ok(status);
+                }
             }
 
             _ => {

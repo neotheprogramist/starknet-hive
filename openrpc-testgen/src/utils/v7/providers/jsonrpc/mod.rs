@@ -576,9 +576,12 @@ where
         simulation_flags: Vec<String>,
         block_id: BlockId<FeltPrimitive>,
     ) -> Result<FeeEstimate<FeltPrimitive>, ProviderError> {
-        let mut result = self
+        let result = self
             .estimate_fee(vec![request], simulation_flags, block_id)
-            .await?;
+            .await;
+        println!("result estimate fee {:?}", result);
+
+        let mut result = result?;
 
         if result.len() == 1 {
             Ok(result.pop().unwrap())
