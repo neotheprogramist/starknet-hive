@@ -1000,8 +1000,8 @@ where
                 },
                 // L2 resources are hard-coded to 0
                 l2_gas: ResourceBounds {
-                    max_amount: "0".to_string(),
-                    max_price_per_unit: "0".to_string(),
+                    max_amount: "0x0".to_string(),
+                    max_price_per_unit: "0x0".to_string(),
                 },
             },
             // Fee market has not been been activated yet so it's hard-coded to be 0
