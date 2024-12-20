@@ -25,23 +25,19 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            ~/.cargo/registry
-            ~/.cargo/git
+            ~/.cargo
+            target
           key: ${{ runner.os }}-cargo-${{ matrix.toolchain }}-${{ hashFiles('**/Cargo.lock') }}
           restore-keys: |
-            ${{ runner.os }}-cargo-${{ matrix.toolchain }}-
+            ${{ runner.os }}-cargo-
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Run quality checks
+      - name: Run ${{ matrix.check }}
         run: |
-          set -euo pipefail
           if [ "${{ matrix.check }}" == "cargo_fmt" ]; then
             cargo fmt -- --check
           elif [ "${{ matrix.check }}" == "cargo_clippy" ]; then
             cargo clippy -- -D warnings
-          else
-            echo "Error: Unknown check type: ${{ matrix.check }}"
-            exit 1
           fi
