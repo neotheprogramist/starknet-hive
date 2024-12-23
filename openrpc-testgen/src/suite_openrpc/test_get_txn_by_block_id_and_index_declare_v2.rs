@@ -1,4 +1,4 @@
-use std::{path::PathBuf, str::FromStr};
+use std::{path::PathBuf, str::FromStr, sync::Arc};
 
 use crate::{
     assert_eq_result, assert_result,
@@ -23,17 +23,17 @@ impl RunnableTrait for TestCase {
     async fn run(test_input: &Self::Input) -> Result<Self, OpenRpcTestGenError> {
         let (flattened_sierra_class, compiled_class_hash) = get_compiled_contract(
             PathBuf::from_str(
-                "target/dev/contracts_contracts_smpl3_HelloStarknet.contract_class.json",
+                "target/dev/contracts_contracts_smpl4_HelloStarknet.contract_class.json",
             )?,
             PathBuf::from_str(
-                "target/dev/contracts_contracts_smpl3_HelloStarknet.compiled_contract_class.json",
+                "target/dev/contracts_contracts_smpl4_HelloStarknet.compiled_contract_class.json",
             )?,
         )
         .await?;
 
         let declaration_hash = test_input
             .random_paymaster_account
-            .declare_v3(flattened_sierra_class, compiled_class_hash)
+            .declare_v2(Arc::new(flattened_sierra_class), compiled_class_hash)
             .send()
             .await?;
 
