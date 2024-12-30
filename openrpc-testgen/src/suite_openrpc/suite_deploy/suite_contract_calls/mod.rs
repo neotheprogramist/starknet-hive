@@ -17,6 +17,7 @@ use crate::{
 };
 
 pub mod test_call_contract;
+pub mod test_call_invalid_selector;
 pub mod test_estimate_message_fee;
 pub mod test_get_class_at;
 pub mod test_get_class_hash_at;
