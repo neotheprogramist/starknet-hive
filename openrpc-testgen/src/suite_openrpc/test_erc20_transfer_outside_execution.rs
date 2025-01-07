@@ -2,6 +2,7 @@ use crate::{
     assert_result,
     utils::{
         conversions::felts_to_biguint::felts_slice_to_biguint,
+        get_balance::get_balance,
         v7::{
             accounts::{
                 account::{Account, AccountError, ConnectedAccount},
@@ -29,7 +30,7 @@ use starknet_types_core::{
     felt::Felt,
     hash::{Poseidon, StarkHash},
 };
-use starknet_types_rpc::{BlockId, BlockTag, FunctionCall, TxnReceipt};
+use starknet_types_rpc::{BlockId, BlockTag, TxnReceipt};
 use std::path::PathBuf;
 use std::str::FromStr;
 
@@ -218,39 +219,43 @@ impl RunnableTrait for TestCase {
             calldata: calldata_to_executable_account_call,
         };
 
-        let exec_balance_before_transfer = test_input
-            .random_executable_account
-            .provider()
-            .call(
-                FunctionCall {
-                    calldata: vec![test_input
-                        .random_executable_account
-                        .random_accounts()?
-                        .address()],
-                    contract_address: contract_address_erc20,
-                    entry_point_selector: get_selector_from_name("balance_of")?,
-                },
+        let exec_balance_before_transfer = felts_slice_to_biguint(
+            get_balance(
+                &test_input.random_paymaster_account.provider(),
+                test_input
+                    .random_executable_account
+                    .random_accounts()?
+                    .address(),
+                contract_address_erc20,
                 BlockId::Tag(BlockTag::Pending),
             )
-            .await?;
+            .await?,
+        )?;
 
-        let paymaster_balance_before = test_input
-            .random_paymaster_account
-            .provider()
-            .call(
-                FunctionCall {
-                    calldata: vec![test_input
-                        .random_paymaster_account
-                        .random_accounts()?
-                        .address()],
-                    contract_address: Felt::from_hex(
-                        "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
-                    )?,
-                    entry_point_selector: get_selector_from_name("balance_of")?,
-                },
+        let paymaster_balance_before = felts_slice_to_biguint(
+            get_balance(
+                test_input.random_paymaster_account.provider(),
+                test_input
+                    .random_paymaster_account
+                    .random_accounts()?
+                    .address(),
+                Felt::from_hex(
+                    "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+                )?,
                 BlockId::Tag(BlockTag::Pending),
             )
-            .await?;
+            .await?,
+        )?;
+
+        let receiver_balance_before_txn = felts_slice_to_biguint(
+            get_balance(
+                &test_input.random_paymaster_account.provider(),
+                account_erc20_receiver_address,
+                contract_address_erc20,
+                BlockId::Tag(BlockTag::Pending),
+            )
+            .await?,
+        )?;
 
         let hash = test_input
             .random_paymaster_account
@@ -264,77 +269,59 @@ impl RunnableTrait for TestCase {
         )
         .await?;
 
-        let exec_balance_after_transfer = test_input
-            .random_executable_account
-            .provider()
-            .call(
-                FunctionCall {
-                    calldata: vec![test_input
-                        .random_executable_account
-                        .random_accounts()?
-                        .address()],
-                    contract_address: contract_address_erc20,
-                    entry_point_selector: get_selector_from_name("balance_of")?,
-                },
+        let exec_balance_after_transfer = felts_slice_to_biguint(
+            get_balance(
+                &test_input.random_paymaster_account.provider(),
+                test_input
+                    .random_executable_account
+                    .random_accounts()?
+                    .address(),
+                contract_address_erc20,
                 BlockId::Tag(BlockTag::Pending),
             )
-            .await?;
+            .await?,
+        )?;
 
-        let paymaster_balance_after = test_input
-            .random_paymaster_account
-            .provider()
-            .call(
-                FunctionCall {
-                    calldata: vec![test_input
-                        .random_paymaster_account
-                        .random_accounts()?
-                        .address()],
-                    contract_address: Felt::from_hex(
-                        "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
-                    )?,
-                    entry_point_selector: get_selector_from_name("balance_of")?,
-                },
+        let paymaster_balance_after = felts_slice_to_biguint(
+            get_balance(
+                test_input.random_paymaster_account.provider(),
+                test_input
+                    .random_paymaster_account
+                    .random_accounts()?
+                    .address(),
+                Felt::from_hex(
+                    "0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d",
+                )?,
                 BlockId::Tag(BlockTag::Pending),
             )
-            .await?;
+            .await?,
+        )?;
 
-        let receiver_balance_after_txn = test_input
-            .random_paymaster_account
-            .provider()
-            .call(
-                FunctionCall {
-                    calldata: vec![account_erc20_receiver_address],
-                    contract_address: contract_address_erc20,
-                    entry_point_selector: get_selector_from_name("balance_of")?,
-                },
+        let receiver_balance_after_txn = felts_slice_to_biguint(
+            get_balance(
+                &test_input.random_paymaster_account.provider(),
+                account_erc20_receiver_address,
+                contract_address_erc20,
                 BlockId::Tag(BlockTag::Pending),
             )
-            .await?;
+            .await?,
+        )?;
 
-        // Prepare assert data
-
-        let receiver_balance_after_txn = felts_slice_to_biguint(receiver_balance_after_txn)?;
         let amount_to_transfer = felts_slice_to_biguint(amount_to_transfer)?;
 
         assert_result!(
-            receiver_balance_after_txn == amount_to_transfer,
+            receiver_balance_after_txn == receiver_balance_before_txn + &amount_to_transfer,
             "Balances do not match"
         );
-
-        let exec_balance_after_transfer = felts_slice_to_biguint(exec_balance_after_transfer)?;
-        let exec_balance_before_transfer = felts_slice_to_biguint(exec_balance_before_transfer)?;
 
         assert_result!(
             exec_balance_before_transfer == exec_balance_after_transfer + amount_to_transfer,
             "Token balance on executable account did not decrease by the transfer amount."
         );
 
-        let paymaster_balance_after = felts_slice_to_biguint(paymaster_balance_after)?;
-        let paymaster_balance_before = felts_slice_to_biguint(paymaster_balance_before)?;
-
         assert_result!(
             paymaster_balance_after < paymaster_balance_before,
-            "Gas balance on paymaster account did not decrease after transaction."
+            "Fee token balance on paymaster account did not decrease after transaction."
         );
 
         Ok(Self {})
