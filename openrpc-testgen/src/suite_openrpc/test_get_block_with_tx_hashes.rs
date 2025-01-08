@@ -22,7 +22,6 @@ impl RunnableTrait for TestCase {
     type Input = super::TestSuiteOpenRpc;
 
     async fn run(test_input: &Self::Input) -> Result<Self, OpenRpcTestGenError> {
-        // Step 1: Declare the contract
         let (flattened_sierra_class, compiled_class_hash) = get_compiled_contract(
             PathBuf::from_str(
                 "target/dev/contracts_contracts_smpl6_HelloStarknet.contract_class.json",
