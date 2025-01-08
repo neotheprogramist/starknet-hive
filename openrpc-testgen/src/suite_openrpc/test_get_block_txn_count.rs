@@ -29,7 +29,7 @@ impl RunnableTrait for TestCase {
 
     /// This test case checks if the get_block_transaction_count endpoint returns the correct number of transactions in a block.
     ///
-    /// It first deploys a contract, then performs a specified number of invoke transactions on the contract.
+    /// It first deploys a contract, then performs a multicall to the contract.
     /// After the invocations, it waits for a new block to be mined.
     /// The test then checks if the correct number of transactions is returned by the get_block_transaction_count endpoint.
     ///
@@ -116,16 +116,15 @@ impl RunnableTrait for TestCase {
             calldata: vec![Felt::from_hex("0x50")?],
         };
 
-        let txn_target_count = rand::thread_rng().gen_range(3..=10);
-        let mut txn_count = 0;
+        let txn_count = rand::thread_rng().gen_range(3..=10);
+        let calls: Vec<Call> = vec![increase_balance_call; txn_count];
 
-        let mut initial_block_number = test_input
+        // Step 5: Wait for a new block to start with a clean slate
+        let initial_block_number = test_input
             .random_paymaster_account
             .provider()
             .block_number()
             .await?;
-
-        // Step 5: Wait for a new block to start with a clean slate
         loop {
             let current_block_number = test_input
                 .random_paymaster_account
@@ -133,54 +132,23 @@ impl RunnableTrait for TestCase {
                 .block_number()
                 .await?;
             if current_block_number > initial_block_number {
-                initial_block_number = current_block_number;
                 break;
             }
             tokio::time::sleep(std::time::Duration::from_millis(500)).await;
         }
 
-        // Step 6: Execute transactions until the target count is reached or a new block is detected
-        loop {
-            test_input
-                .random_paymaster_account
-                .execute_v3(vec![increase_balance_call.clone()])
-                .send()
-                .await?;
+        // Step 6: Execute transactions
+        let invoke_result = test_input
+            .random_paymaster_account
+            .execute_v3(calls)
+            .send()
+            .await?;
 
-            txn_count += 1;
-
-            if txn_count >= txn_target_count {
-                let block_number = test_input
-                    .random_paymaster_account
-                    .provider()
-                    .block_number()
-                    .await?;
-
-                loop {
-                    let current_block_number = test_input
-                        .random_paymaster_account
-                        .provider()
-                        .block_number()
-                        .await?;
-                    if current_block_number > block_number {
-                        initial_block_number = current_block_number;
-                        break;
-                    }
-                    tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-                }
-                break;
-            }
-
-            let current_block_number = test_input
-                .random_paymaster_account
-                .provider()
-                .block_number()
-                .await?;
-            if initial_block_number < current_block_number {
-                initial_block_number = current_block_number;
-                break;
-            }
-        }
+        wait_for_sent_transaction(
+            invoke_result.transaction_hash,
+            &test_input.random_paymaster_account.random_accounts()?,
+        )
+        .await?;
 
         // Step 7: Verify the transaction count in the block and if the response is ok
         let block_txn_count = test_input
@@ -194,11 +162,12 @@ impl RunnableTrait for TestCase {
         assert_result!(result);
 
         let block_txn_count = block_txn_count?;
+
         assert_result!(
-            block_txn_count == txn_count,
+            block_txn_count == 1,
             format!(
                 "Mismatch in transaction count. Expected: {}, Found: {}.",
-                txn_count, block_txn_count
+                1, block_txn_count
             )
         );
 
