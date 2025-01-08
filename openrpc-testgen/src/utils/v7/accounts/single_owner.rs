@@ -26,7 +26,6 @@ where
     block_id: BlockId<Felt>,
     encoding: ExecutionEncoding,
 }
-#[allow(dead_code)]
 #[derive(Debug, thiserror::Error)]
 pub enum SignError<S> {
     #[error("Signer error ")]
@@ -34,7 +33,6 @@ pub enum SignError<S> {
     #[error("Compute class hash error")]
     ClassHash(ComputeClassHashError),
 }
-#[allow(dead_code)]
 
 /// How calldata for the `__execute__` entrypoint is encoded.
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -157,23 +155,6 @@ where
 
         Ok(vec![signature.r, signature.s])
     }
-
-    // async fn sign_legacy_declaration(
-    //     &self,
-    //     legacy_declaration: &RawLegacyDeclaration,
-    //     query_only: bool,
-    // ) -> Result<Vec<Felt>, Self::SignError> {
-    //     let tx_hash = legacy_declaration
-    //         .transaction_hash(self.chain_id, self.address, query_only)
-    //         .map_err(SignError::ClassHash)?;
-    //     let signature = self
-    //         .signer
-    //         .sign_hash(&tx_hash)
-    //         .await
-    //         .map_err(SignError::Signer)?;
-
-    //     Ok(vec![signature.r, signature.s])
-    // }
 
     fn is_signer_interactive(&self) -> bool {
         self.signer.is_interactive()

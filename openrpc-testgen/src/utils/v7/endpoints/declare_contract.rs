@@ -25,7 +25,6 @@ use tokio::io::AsyncReadExt;
 use tracing::{debug, info};
 use url::ParseError;
 
-#[allow(dead_code)]
 pub async fn declare_contract<P: Provider + Send + Sync>(
     account: &SingleOwnerAccount<P, LocalWallet>,
     sierra_path: PathBuf,
@@ -188,7 +187,6 @@ fn get_compiled_class_hash(artifact_path: &PathBuf) -> Result<Felt, RunnerError>
 }
 
 #[derive(Debug, Error)]
-#[allow(dead_code)]
 pub enum RunnerError {
     #[error(transparent)]
     ParsingError(#[from] ParseError),

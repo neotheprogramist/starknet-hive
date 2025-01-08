@@ -2,17 +2,13 @@ use serde::{Deserialize, Serialize};
 use starknet_types_core::felt::Felt;
 
 // used in wait_for_tx. Txs will be fetched every 5s with timeout of 300s - so 60 attempts
-#[allow(dead_code)]
 pub const WAIT_TIMEOUT: u16 = 600;
-#[allow(dead_code)]
 pub const WAIT_RETRY_INTERVAL: u8 = 5;
-#[allow(dead_code)]
 
 pub struct Deploy {
     pub name: Option<String>,
     pub max_fee: Option<Felt>,
 }
-#[allow(dead_code)]
 #[derive(Clone, Copy)]
 pub struct WaitForTx {
     pub wait: bool,
@@ -30,7 +26,7 @@ pub struct ValidatedWaitParams {
     )]
     retry_interval: u8,
 }
-#[allow(dead_code)]
+
 impl ValidatedWaitParams {
     #[must_use]
     pub fn new(retry_interval: u8, timeout: u16) -> Self {

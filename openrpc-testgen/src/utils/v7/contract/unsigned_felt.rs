@@ -9,10 +9,8 @@ use starknet_types_core::felt::Felt;
 
 pub struct UfeHex;
 
-#[allow(dead_code)]
 pub struct UfeHexOption;
 
-#[allow(dead_code)]
 pub struct UfePendingBlockHash;
 
 struct UfeHexVisitor;

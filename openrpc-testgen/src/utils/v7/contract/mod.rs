@@ -300,12 +300,7 @@ mod errors {
         PcOutOfRange(PcOutOfRangeError),
         Json(JsonError),
     }
-    #[derive(Debug)]
-    #[allow(dead_code)]
-    pub enum CompressProgramError {
-        Json(JsonError),
-        Io(std::io::Error),
-    }
+
     #[derive(Debug)]
     pub struct JsonError {
         pub(crate) message: String,
@@ -390,15 +385,12 @@ pub use errors::{
 
 use starknet_types_rpc::v0_7_1::{EntryPointsByType, SierraEntryPoint};
 
-#[allow(dead_code)]
-
 pub trait HashAndFlatten {
     fn class_hash(&self) -> Result<Felt, ComputeClassHashError>;
 
     fn flatten(self) -> Result<ContractClass<Felt>, JsonError>;
 }
 
-#[allow(dead_code)]
 impl HashAndFlatten for SierraClass {
     fn class_hash(&self) -> Result<Felt, ComputeClassHashError> {
         let abi_str = to_string_pythonic(&self.abi).map_err(|err| {
@@ -430,26 +422,6 @@ impl HashAndFlatten for SierraClass {
             abi: Some(abi),
             contract_class_version: self.contract_class_version,
         })
-    }
-}
-
-#[allow(dead_code)]
-trait ClassHash {
-    fn class_hash(&self) -> Felt;
-}
-
-impl ClassHash for ContractClass<Felt> {
-    fn class_hash(&self) -> Felt {
-        let data = vec![
-            PREFIX_CONTRACT_CLASS_V0_1_0,
-            hash_sierra_entrypoints(&self.entry_points_by_type.external),
-            hash_sierra_entrypoints(&self.entry_points_by_type.l1_handler),
-            hash_sierra_entrypoints(&self.entry_points_by_type.constructor),
-            starknet_keccak(self.abi.clone().expect("abi expected").as_bytes()),
-            Poseidon::hash_array(&self.sierra_program),
-        ];
-
-        normalize_address(Poseidon::hash_array(&data))
     }
 }
 

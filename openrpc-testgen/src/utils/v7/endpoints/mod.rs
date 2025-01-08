@@ -41,7 +41,6 @@ impl Rpc {
     }
 }
 
-#[allow(dead_code)]
 pub trait RpcEndpoints {
     #[allow(clippy::too_many_arguments)]
     fn invoke_contract_erc20_transfer(

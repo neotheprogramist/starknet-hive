@@ -772,7 +772,6 @@ impl<H: FeltHash, const HEIGHT: usize> MerkleTree<H, HEIGHT> {
     /// full path to that node.
     ///
     /// Upon successful non-breaking visit of the tree, `None` will be returned.
-    #[allow(dead_code)]
     pub fn dfs<X, VisitorFn>(
         &self,
         storage: &impl Storage,
@@ -783,7 +782,6 @@ impl<H: FeltHash, const HEIGHT: usize> MerkleTree<H, HEIGHT> {
     {
         use bitvec::prelude::bitvec;
 
-        #[allow(dead_code)]
         struct VisitedNode {
             node: Rc<RefCell<InternalNode>>,
             path: BitVec<u8, Msb0>,

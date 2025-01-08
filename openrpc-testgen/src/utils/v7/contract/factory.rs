@@ -83,7 +83,7 @@ impl<A> ContractFactory<A> {
         }
     }
 }
-#[allow(dead_code)]
+
 impl<A> ContractFactory<A>
 where
     A: Account,
@@ -134,7 +134,7 @@ where
         self.deploy_v3(constructor_calldata, salt, unique)
     }
 }
-#[allow(dead_code)]
+
 impl<'f, A> DeploymentV1<'f, A> {
     pub fn nonce(self, nonce: Felt) -> Self {
         Self {
@@ -157,7 +157,7 @@ impl<'f, A> DeploymentV1<'f, A> {
         }
     }
 }
-#[allow(dead_code)]
+
 impl<'f, A> DeploymentV3<'f, A> {
     pub fn nonce(self, nonce: Felt) -> Self {
         Self {
@@ -194,7 +194,7 @@ impl<'f, A> DeploymentV3<'f, A> {
         }
     }
 }
-#[allow(dead_code)]
+
 impl<'f, A> DeploymentV1<'f, A>
 where
     A: Account,
@@ -216,7 +216,7 @@ where
         )
     }
 }
-#[allow(dead_code)]
+
 impl<'f, A> DeploymentV3<'f, A>
 where
     A: Account,
@@ -239,7 +239,7 @@ where
     }
 }
 use std::fmt::Debug;
-#[allow(dead_code)]
+
 impl<'f, A> DeploymentV1<'f, A>
 where
     A: ConnectedAccount + Sync + Debug,
@@ -266,7 +266,7 @@ where
         execution.send().await
     }
 }
-#[allow(dead_code)]
+
 impl<'f, A> DeploymentV3<'f, A>
 where
     A: ConnectedAccount + Sync,

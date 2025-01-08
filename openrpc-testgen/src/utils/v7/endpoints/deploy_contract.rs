@@ -17,7 +17,6 @@ use crate::utils::v7::{
 use super::declare_contract::RunnerError;
 
 #[derive(Error, Debug)]
-#[allow(dead_code)]
 pub enum DeployError {
     #[error("Error creating an account")]
     CreateAccount(String),
@@ -32,7 +31,6 @@ pub enum DeployError {
     Runner(#[from] RunnerError),
 }
 
-#[allow(dead_code)]
 pub async fn deploy_contract<P: Provider + Send + Sync + Debug>(
     account: &SingleOwnerAccount<P, LocalWallet>,
     class_hash: Felt,

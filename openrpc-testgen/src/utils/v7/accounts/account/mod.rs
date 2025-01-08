@@ -6,9 +6,7 @@ use sha3::{Digest, Keccak256};
 
 use starknet_types_core::felt::{Felt, NonZeroFelt};
 use starknet_types_core::hash::{Poseidon, StarkHash};
-use starknet_types_rpc::v0_7_1::{
-    BlockId, BlockTag, ContractClass, DeprecatedContractClass, SierraEntryPoint,
-};
+use starknet_types_rpc::v0_7_1::{BlockId, BlockTag, ContractClass, SierraEntryPoint};
 use std::{error::Error, sync::Arc};
 
 use super::{
@@ -87,25 +85,11 @@ pub trait Account: ExecutionEncoder + Sized {
         query_only: bool,
     ) -> impl std::future::Future<Output = Result<Vec<Felt>, Self::SignError>>;
 
-    // async fn sign_legacy_declaration(
-    //     &self,
-    //     legacy_declaration: &RawLegacyDeclaration,
-    //     query_only: bool,
-    // ) -> Result<Vec<Felt>, Self::SignError>;
-
-    /// Whether the underlying signer implementation is interactive, such as a hardware wallet.
-    /// Implementations should return `true` if the signing operation is very expensive, even if not
-    /// strictly "interactive" as in requiring human input.
-    ///
-    /// This affects how an account makes decision on whether to request a real signature for
-    /// estimation/simulation purposes.
     fn is_signer_interactive(&self) -> bool;
-    #[allow(dead_code)]
 
     fn execute_v1(&self, calls: Vec<Call>) -> ExecutionV1<Self> {
         ExecutionV1::new(calls, self)
     }
-    #[allow(dead_code)]
 
     fn execute_v3(&self, calls: Vec<Call>) -> ExecutionV3<Self> {
         ExecutionV3::new(calls, self)
@@ -134,22 +118,6 @@ pub trait Account: ExecutionEncoder + Sized {
     {
         DeclarationV3::new(contract_class, compiled_class_hash, self)
     }
-
-    // #[deprecated = "use version specific variants (`declare_v1` & `declare_v3`) instead"]
-    // fn declare(
-    //     &self,
-    //     contract_class: Arc<ContractClass<Felt>>,
-    //     compiled_class_hash: Felt,
-    // ) -> DeclarationV2<Self> {
-    //     self.declare_v2(contract_class, compiled_class_hash)
-    // }
-
-    // fn declare_legacy(
-    //     &self,
-    //     contract_class: Arc<DeprecatedContractClass>,
-    // ) -> LegacyDeclaration<Self> {
-    //     LegacyDeclaration::new(contract_class, self)
-    // }
 }
 
 #[auto_impl(&, Box, Arc)]
@@ -247,19 +215,6 @@ pub struct DeclarationV3<'a, A> {
     gas_price_estimate_multiplier: f64,
 }
 
-/// An intermediate type allowing users to optionally specify `nonce` and/or `max_fee`.
-#[must_use]
-#[derive(Debug)]
-#[allow(dead_code)]
-
-pub struct LegacyDeclaration<'a, A> {
-    account: &'a A,
-    contract_class: Arc<DeprecatedContractClass<Felt>>,
-    nonce: Option<Felt>,
-    max_fee: Option<Felt>,
-    fee_estimate_multiplier: f64,
-}
-
 /// [ExecutionV1] but with `nonce` and `max_fee` already determined.
 #[derive(Debug)]
 pub struct RawExecutionV1 {
@@ -348,16 +303,6 @@ pub struct RawDeclarationV3 {
     gas_price: u128,
 }
 
-/// [LegacyDeclaration] but with `nonce` and `max_fee` already determined.
-#[derive(Debug)]
-#[allow(dead_code)]
-
-pub struct RawLegacyDeclaration {
-    contract_class: Arc<DeprecatedContractClass<Felt>>,
-    nonce: Felt,
-    max_fee: Felt,
-}
-
 /// [RawExecutionV1] but with an account associated.
 #[derive(Debug)]
 pub struct PreparedExecutionV1<'a, A> {
@@ -385,15 +330,7 @@ pub struct PreparedDeclarationV3<'a, A> {
     account: &'a A,
     inner: RawDeclarationV3,
 }
-#[allow(dead_code)]
 
-/// [RawLegacyDeclaration] but with an account associated.
-#[derive(Debug)]
-pub struct PreparedLegacyDeclaration<'a, A> {
-    account: &'a A,
-    inner: RawLegacyDeclaration,
-}
-#[allow(dead_code)]
 #[derive(Debug, thiserror::Error)]
 pub enum AccountError<S> {
     #[error(transparent)]
@@ -456,16 +393,6 @@ where
         (*self).sign_declaration_v3(declaration, query_only).await
     }
 
-    // async fn sign_legacy_declaration(
-    //     &self,
-    //     legacy_declaration: &RawLegacyDeclaration,
-    //     query_only: bool,
-    // ) -> Result<Vec<Felt>, Self::SignError> {
-    //     (*self)
-    //         .sign_legacy_declaration(legacy_declaration, query_only)
-    //         .await
-    // }
-
     fn is_signer_interactive(&self) -> bool {
         (*self).is_signer_interactive()
     }
@@ -520,17 +447,6 @@ where
             .sign_declaration_v3(declaration, query_only)
             .await
     }
-
-    // async fn sign_legacy_declaration(
-    //     &self,
-    //     legacy_declaration: &RawLegacyDeclaration,
-    //     query_only: bool,
-    // ) -> Result<Vec<Felt>, Self::SignError> {
-    //     self.as_ref()
-    //         .sign_legacy_declaration(legacy_declaration, query_only)
-    //         .await
-    // }
-
     fn is_signer_interactive(&self) -> bool {
         self.as_ref().is_signer_interactive()
     }
@@ -585,16 +501,6 @@ where
             .sign_declaration_v3(declaration, query_only)
             .await
     }
-
-    // async fn sign_legacy_declaration(
-    //     &self,
-    //     legacy_declaration: &RawLegacyDeclaration,
-    //     query_only: bool,
-    // ) -> Result<Vec<Felt>, Self::SignError> {
-    //     self.as_ref()
-    //         .sign_legacy_declaration(legacy_declaration, query_only)
-    //         .await
-    // }
 
     fn is_signer_interactive(&self) -> bool {
         self.as_ref().is_signer_interactive()

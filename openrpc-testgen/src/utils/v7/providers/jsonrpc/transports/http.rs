@@ -27,7 +27,7 @@ struct JsonRpcRequest<T> {
     method: JsonRpcMethod,
     params: T,
 }
-#[allow(dead_code)]
+
 impl HttpTransport {
     pub fn new(url: impl Into<Url>) -> Self {
         Self::new_with_client(url, Client::new())
