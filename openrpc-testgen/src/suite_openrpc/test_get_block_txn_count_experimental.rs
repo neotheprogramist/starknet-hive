@@ -24,7 +24,6 @@ impl RunnableTrait for TestCase {
     type Input = super::TestSuiteOpenRpc;
 
     async fn run(test_input: &Self::Input) -> Result<Self, OpenRpcTestGenError> {
-        println!("XD1");
         let (flattened_sierra_class, compiled_class_hash) = get_compiled_contract(
             PathBuf::from_str(
                 "target/dev/contracts_contracts_smpl4_HelloStarknet.contract_class.json",
@@ -47,8 +46,6 @@ impl RunnableTrait for TestCase {
         )
         .await?;
 
-        println!("XD2");
-
         let mut txn_count = 0;
         let paymaster_account = test_input.random_paymaster_account.random_accounts()?;
 
@@ -63,7 +60,6 @@ impl RunnableTrait for TestCase {
             .provider()
             .get_nonce(BlockId::Tag(BlockTag::Pending), paymaster_account.address())
             .await?;
-        println!("ACC NONCE {:?}", initial_nonce);
 
         let initial_block_number = test_input
             .random_paymaster_account
@@ -71,12 +67,7 @@ impl RunnableTrait for TestCase {
             .block_number()
             .await?;
 
-        println!("XD3");
-
         loop {
-            println!("loop {}", txn_count);
-            println!("ACC NONCE START LOOP {}", initial_nonce);
-
             factory
                 .deploy_v3(vec![], Felt::from_bytes_be(&salt_buffer), true)
                 .nonce(initial_nonce)
@@ -90,8 +81,6 @@ impl RunnableTrait for TestCase {
                 .get_nonce(BlockId::Tag(BlockTag::Pending), paymaster_account.address())
                 .await?;
 
-            println!("Updated NONCE after transaction: {}", initial_nonce);
-
             let current_block_number = test_input
                 .random_paymaster_account
                 .provider()
@@ -99,7 +88,6 @@ impl RunnableTrait for TestCase {
                 .await?;
 
             if current_block_number > initial_block_number {
-                println!("Breaking loop");
                 break;
             }
         }
