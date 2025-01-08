@@ -41,7 +41,6 @@ pub mod test_deploy_account_outside_execution;
 pub mod test_erc20_transfer_outside_execution;
 pub mod test_get_block_number;
 pub mod test_get_block_txn_count;
-// pub mod test_get_block_txn_count_experimental; // TODO
 pub mod test_get_block_with_tx_hashes;
 pub mod test_get_block_with_txs;
 pub mod test_get_chain_id;
