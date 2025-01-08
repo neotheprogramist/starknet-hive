@@ -167,7 +167,7 @@ pub trait ConnectedAccount: Account {
 
     /// Block ID to use when checking nonce and estimating fees.
     fn block_id(&self) -> BlockId<Felt> {
-        BlockId::Tag(BlockTag::Latest)
+        BlockId::Tag(BlockTag::Pending)
     }
 
     fn get_nonce(&self) -> impl std::future::Future<Output = Result<Felt, ProviderError>> {

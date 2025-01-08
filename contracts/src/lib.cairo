@@ -8,6 +8,7 @@ mod smpl1;
 mod smpl2;
 mod smpl3;
 mod smpl4;
+mod smpl5;
 
 /// Paymaster implementation.
 mod paymaster {
