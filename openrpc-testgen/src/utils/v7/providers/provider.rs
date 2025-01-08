@@ -263,4 +263,6 @@ pub enum ProviderError {
     ArrayLengthMismatch,
     #[error("{0}")]
     Other(Box<dyn ProviderImplError>),
+    #[error("Unexpected pending block response for 'Latest' block tag")]
+    UnexpectedPendingBlock,
 }
