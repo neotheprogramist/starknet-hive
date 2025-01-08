@@ -35,7 +35,7 @@ where
             public_key: public_key.scalar(),
             signer,
             provider,
-            block_id: BlockId::Tag(BlockTag::Latest),
+            block_id: BlockId::Tag(BlockTag::Pending),
         })
     }
 

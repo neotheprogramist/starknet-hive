@@ -96,14 +96,18 @@ impl RunnableTrait for TestCase {
                 .transactions
                 .iter()
                 .position(|tx| tx.transaction_hash == deploy_account_hash)
-                .ok_or_else(|| OpenRpcTestGenError::TransactionNotFound(deploy_account_hash.to_string()))?
+                .ok_or_else(|| {
+                    OpenRpcTestGenError::TransactionNotFound(deploy_account_hash.to_string())
+                })?
                 .try_into()
                 .map_err(|_| OpenRpcTestGenError::TransactionIndexOverflow)?,
             MaybePendingBlockWithTxs::Pending(block_with_txs) => block_with_txs
                 .transactions
                 .iter()
                 .position(|tx| tx.transaction_hash == deploy_account_hash)
-                .ok_or_else(|| OpenRpcTestGenError::TransactionNotFound(deploy_account_hash.to_string()))?
+                .ok_or_else(|| {
+                    OpenRpcTestGenError::TransactionNotFound(deploy_account_hash.to_string())
+                })?
                 .try_into()
                 .map_err(|_| OpenRpcTestGenError::TransactionIndexOverflow)?,
         };
