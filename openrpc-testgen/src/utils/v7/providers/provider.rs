@@ -265,4 +265,6 @@ pub enum ProviderError {
     Other(Box<dyn ProviderImplError>),
     #[error("Unexpected pending block response for 'Latest' block tag")]
     UnexpectedPendingBlock,
+    #[error("Class hash not found in state update")]
+    ClassHashNotFoundInStateUpdate,
 }
