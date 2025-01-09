@@ -23,10 +23,10 @@ impl RunnableTrait for TestCase {
     async fn run(test_input: &Self::Input) -> Result<Self, OpenRpcTestGenError> {
         let (flattened_sierra_class, compiled_class_hash) = get_compiled_contract(
             PathBuf::from_str(
-                "target/dev/contracts_contracts_smpl7_HelloStarknet.contract_class.json",
+                "target/dev/contracts_contracts_smpl8_HelloStarknet.contract_class.json",
             )?,
             PathBuf::from_str(
-                "target/dev/contracts_contracts_smpl7_HelloStarknet.compiled_contract_class.json",
+                "target/dev/contracts_contracts_smpl8_HelloStarknet.compiled_contract_class.json",
             )?,
         )
         .await?;
