@@ -64,10 +64,10 @@ impl RunnableTrait for TestCase {
             .random_paymaster_account
             .execute_v3(vec![increase_balance_call])
             .send()
-            .await;
+            .await?;
 
         wait_for_sent_transaction(
-            invoke_result.as_ref().unwrap().transaction_hash,
+            invoke_result.transaction_hash,
             &test_input.random_paymaster_account.random_accounts()?,
         )
         .await?;
