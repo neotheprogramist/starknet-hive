@@ -1,10 +1,16 @@
+use std::{path::PathBuf, str::FromStr};
+
 use crate::{
     assert_result,
     utils::v7::{
-        accounts::account::ConnectedAccount, endpoints::errors::OpenRpcTestGenError,
+        accounts::account::{Account, ConnectedAccount},
+        endpoints::{
+            declare_contract::get_compiled_contract, errors::OpenRpcTestGenError,
+            utils::wait_for_sent_transaction,
+        },
         providers::provider::Provider,
     },
-    RunnableTrait,
+    RandomizableAccountsTrait, RunnableTrait,
 };
 use starknet_types_rpc::{BlockId, BlockTag};
 
@@ -15,6 +21,28 @@ impl RunnableTrait for TestCase {
     type Input = super::TestSuiteOpenRpc;
 
     async fn run(test_input: &Self::Input) -> Result<Self, OpenRpcTestGenError> {
+        let (flattened_sierra_class, compiled_class_hash) = get_compiled_contract(
+            PathBuf::from_str(
+                "target/dev/contracts_contracts_smpl8_HelloStarknet.contract_class.json",
+            )?,
+            PathBuf::from_str(
+                "target/dev/contracts_contracts_smpl8_HelloStarknet.compiled_contract_class.json",
+            )?,
+        )
+        .await?;
+
+        let declaration_result = test_input
+            .random_paymaster_account
+            .declare_v3(flattened_sierra_class, compiled_class_hash)
+            .send()
+            .await?;
+
+        wait_for_sent_transaction(
+            declaration_result.transaction_hash,
+            &test_input.random_paymaster_account.random_accounts()?,
+        )
+        .await?;
+
         let state_update = test_input
             .random_paymaster_account
             .provider()
@@ -24,6 +52,29 @@ impl RunnableTrait for TestCase {
         let result = state_update.is_ok();
 
         assert_result!(result);
+
+        let state_update = match state_update.unwrap() {
+            starknet_types_rpc::MaybePendingStateUpdate::Block(state_update) => state_update,
+            starknet_types_rpc::MaybePendingStateUpdate::Pending(_) => {
+                return Err(OpenRpcTestGenError::ProviderError(
+                    crate::utils::v7::providers::provider::ProviderError::UnexpectedPendingBlock,
+                ))
+            }
+        };
+
+        let class_hash = state_update.state_diff.declared_classes[0]
+            .class_hash
+            .ok_or(OpenRpcTestGenError::ProviderError(
+            crate::utils::v7::providers::provider::ProviderError::ClassHashNotFoundInStateUpdate,
+        ))?;
+
+        assert_result!(
+            class_hash == declaration_result.class_hash,
+            format!(
+                "Mismatch in transaction hash. Expected: {}, Found: {:?}.",
+                declaration_result.class_hash, class_hash
+            )
+        );
 
         Ok(Self {})
     }

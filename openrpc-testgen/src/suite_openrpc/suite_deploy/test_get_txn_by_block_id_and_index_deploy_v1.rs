@@ -29,10 +29,10 @@ impl RunnableTrait for TestCase {
         let invoke_result = factory
             .deploy_v1(vec![], Felt::from_bytes_be(&salt_buffer), true)
             .send()
-            .await;
+            .await?;
 
         wait_for_sent_transaction(
-            invoke_result.as_ref().unwrap().transaction_hash,
+            invoke_result.transaction_hash,
             &test_input.random_paymaster_account.random_accounts()?,
         )
         .await?;
@@ -54,12 +54,10 @@ impl RunnableTrait for TestCase {
             MaybePendingBlockWithTxs::Block(block_with_txs) => block_with_txs
                 .transactions
                 .iter()
-                .position(|tx| {
-                    tx.transaction_hash == invoke_result.as_ref().unwrap().transaction_hash
-                })
+                .position(|tx| tx.transaction_hash == invoke_result.transaction_hash)
                 .ok_or_else(|| {
                     OpenRpcTestGenError::TransactionNotFound(
-                        invoke_result.as_ref().unwrap().transaction_hash.to_string(),
+                        invoke_result.transaction_hash.to_string(),
                     )
                 })?
                 .try_into()
@@ -67,12 +65,10 @@ impl RunnableTrait for TestCase {
             MaybePendingBlockWithTxs::Pending(block_with_txs) => block_with_txs
                 .transactions
                 .iter()
-                .position(|tx| {
-                    tx.transaction_hash == invoke_result.as_ref().unwrap().transaction_hash
-                })
+                .position(|tx| tx.transaction_hash == invoke_result.transaction_hash)
                 .ok_or_else(|| {
                     OpenRpcTestGenError::TransactionNotFound(
-                        invoke_result.as_ref().unwrap().transaction_hash.to_string(),
+                        invoke_result.transaction_hash.to_string(),
                     )
                 })?
                 .try_into()

@@ -326,16 +326,29 @@ pub fn hash_entrypoints(entrypoints: &[SierraEntryPoint<Felt>]) -> Felt {
     Poseidon::hash_array(&data)
 }
 
+// pub fn starknet_keccak(data: &[u8]) -> Felt {
+//     let mut hasher = Keccak256::new();
+//     hasher.update(data);
+//     let mut hash = hasher.finalize();
+
+//     // Remove the first 6 bits
+//     hash[0] &= 0b00000011;
+
+//     // Because we know hash is always 32 bytes
+//     Felt::from_bytes_be(unsafe { &*(hash[..].as_ptr() as *const [u8; 32]) })
+// }
+
 pub fn starknet_keccak(data: &[u8]) -> Felt {
     let mut hasher = Keccak256::new();
     hasher.update(data);
-    let mut hash = hasher.finalize();
+    let hash = hasher.finalize();
 
-    // Remove the first 6 bits
-    hash[0] &= 0b00000011;
+    // Convert hash to big-endian integer and mask to 250 bits
+    let mut hash_bytes = [0u8; 32];
+    hash_bytes.copy_from_slice(&hash[..32]);
+    hash_bytes[0] &= 0b00000011; // Ensure only the lowest 250 bits are kept
 
-    // Because we know hash is always 32 bytes
-    Felt::from_bytes_be(unsafe { &*(hash[..].as_ptr() as *const [u8; 32]) })
+    Felt::from_bytes_be(&hash_bytes)
 }
 
 /// [DeclarationV3] but with `nonce`, `gas` and `gas_price` already determined.

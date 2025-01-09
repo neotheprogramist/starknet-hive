@@ -1,11 +1,7 @@
 #[starknet::interface]
 pub trait IHelloStarknet<TContractState> {
     fn increase_balance(ref self: TContractState, amount: felt252);
-    fn decrease_balance(ref self: TContractState, amount: felt252);
     fn get_balance(self: @TContractState) -> felt252;
-    fn get_extra_data(self: @TContractState) -> felt252;
-    fn get_user_balance(self: @TContractState, user: felt252) -> felt252;
-    fn deposit_l2(ref self: TContractState, user: felt252, amount: felt252);
 }
 
 #[starknet::contract]
@@ -16,7 +12,11 @@ mod HelloStarknet {
     struct Storage {
         balance: felt252,
         balances: Map<felt252, felt252>,
-        extra_data: felt252,
+        smpl1: felt252,
+        smpl2: felt252,
+        smpl3: felt252,
+        smpl4: felt252,
+        smpl5: felt252,
     }
 
     #[event]
@@ -46,25 +46,8 @@ mod HelloStarknet {
             self.balance.write(self.balance.read() + amount);
         }
 
-        fn decrease_balance(ref self: ContractState, amount: felt252) {
-            self.balance.write(self.balance.read() - amount);
-        }
-
         fn get_balance(self: @ContractState) -> felt252 {
             self.balance.read()
-        }
-
-        fn get_extra_data(self: @ContractState) -> felt252 {
-            self.extra_data.read()
-        }
-
-        fn get_user_balance(self: @ContractState, user: felt252) -> felt252 {
-            self.balances.read(user)
-        }
-
-        fn deposit_l2(ref self: ContractState, user: felt252, amount: felt252) {
-            let balance = self.balances.read(user);
-            self.balances.write(user, balance + amount);
         }
     }
 }
