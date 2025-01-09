@@ -19,7 +19,7 @@ use crate::{
 };
 use rand::{rngs::StdRng, Rng, RngCore, SeedableRng};
 use starknet_types_core::felt::Felt;
-use starknet_types_rpc::{BlockId, TxnReceipt};
+use starknet_types_rpc::{BlockId, BlockTag, TxnReceipt};
 
 #[derive(Clone, Debug)]
 pub struct TestCase {}
@@ -140,14 +140,22 @@ impl RunnableTrait for TestCase {
         }
 
         // Step 6: Execute transactions until the target count is reached or a new block is detected
+        let mut nonce = test_input
+            .random_paymaster_account
+            .provider()
+            .get_nonce(BlockId::Tag(BlockTag::Pending), paymaster_account.address())
+            .await?;
         loop {
             test_input
                 .random_paymaster_account
                 .execute_v3(vec![increase_balance_call.clone()])
+                .nonce(nonce)
                 .send()
                 .await?;
 
             txn_count += 1;
+            nonce += Felt::ONE;
+            println!("Nonce after tx: {}", nonce);
 
             if txn_count >= txn_target_count {
                 let block_number = test_input
