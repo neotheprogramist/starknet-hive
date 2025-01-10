@@ -267,4 +267,6 @@ pub enum ProviderError {
     UnexpectedPendingBlock,
     #[error("Class hash not found in state update")]
     ClassHashNotFoundInStateUpdate,
+    #[error("Missing deployed contract")]
+    MissingDeployedContract,
 }
