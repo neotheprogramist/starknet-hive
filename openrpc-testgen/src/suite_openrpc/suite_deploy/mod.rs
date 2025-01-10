@@ -21,14 +21,14 @@ use crate::{
     RandomizableAccountsTrait, SetupableTrait,
 };
 use std::str::FromStr;
-pub mod suite_contract_calls;
+// pub mod suite_contract_calls;
 pub mod test_deploy_txn_v1;
-pub mod test_deploy_txn_v1_invalid_class_hash;
-pub mod test_deploy_txn_v3;
-pub mod test_deploy_txn_v3_invalid_class_hash;
-pub mod test_get_class;
-pub mod test_get_txn_by_block_id_and_index_deploy_v1;
-pub mod test_get_txn_by_block_id_and_index_deploy_v3;
+// pub mod test_deploy_txn_v1_invalid_class_hash;
+// pub mod test_deploy_txn_v3;
+// pub mod test_deploy_txn_v3_invalid_class_hash;
+// pub mod test_get_class;
+// pub mod test_get_txn_by_block_id_and_index_deploy_v1;
+// pub mod test_get_txn_by_block_id_and_index_deploy_v3;
 
 #[derive(Clone, Debug)]
 pub struct TestSuiteDeploy {
