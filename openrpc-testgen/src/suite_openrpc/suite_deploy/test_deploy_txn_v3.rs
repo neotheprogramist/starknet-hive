@@ -60,7 +60,7 @@ impl RunnableTrait for TestCase {
         let state_update_deployed_contract_class_hash = state_update
             .state_diff
             .deployed_contracts
-            .get(0)
+            .first()
             .ok_or(OpenRpcTestGenError::ProviderError(
                 crate::utils::v7::providers::provider::ProviderError::MissingDeployedContract,
             ))?

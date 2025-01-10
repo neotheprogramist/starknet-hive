@@ -1,7 +1,7 @@
 use std::{path::PathBuf, str::FromStr};
 
 use crate::{
-    assert_eq_result, assert_result,
+    assert_result,
     utils::v7::{
         accounts::account::{Account, AccountError, ConnectedAccount},
         endpoints::{
@@ -18,7 +18,6 @@ use crate::{
 };
 use serde_json::Value;
 use starknet_types_rpc::{BlockId, BlockTag};
-use tracing_subscriber::fmt::format;
 
 #[derive(Clone, Debug)]
 pub struct TestCase {}
