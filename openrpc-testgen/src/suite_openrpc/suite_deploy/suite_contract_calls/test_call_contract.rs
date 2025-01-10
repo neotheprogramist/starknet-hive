@@ -19,10 +19,24 @@ impl RunnableTrait for TestCase {
     type Input = super::TestSuiteContractCalls;
 
     async fn run(test_input: &Self::Input) -> Result<Self, OpenRpcTestGenError> {
+        let initial_balance = test_input
+            .random_paymaster_account
+            .provider()
+            .call(
+                FunctionCall {
+                    calldata: vec![],
+                    contract_address: test_input.deployed_contract_address,
+                    entry_point_selector: get_selector_from_name("get_balance")?,
+                },
+                BlockId::Tag(BlockTag::Pending),
+            )
+            .await?[0];
+
+        let amount_to_increase = Felt::from_hex_unchecked("0x50");
         let increase_balance_call = Call {
             to: test_input.deployed_contract_address,
             selector: get_selector_from_name("increase_balance")?,
-            calldata: vec![Felt::from_hex("0x50")?],
+            calldata: vec![amount_to_increase],
         };
 
         let invoke_result = test_input
@@ -37,7 +51,7 @@ impl RunnableTrait for TestCase {
         )
         .await?;
 
-        let balance = test_input
+        let updated_balance = test_input
             .random_paymaster_account
             .provider()
             .call(
@@ -50,9 +64,19 @@ impl RunnableTrait for TestCase {
             )
             .await;
 
-        let result = balance.is_ok();
+        let result = updated_balance.is_ok();
 
         assert_result!(result);
+
+        let updated_balance = updated_balance?[0];
+        assert_result!(
+            updated_balance == initial_balance + amount_to_increase,
+            format!(
+                "Unexpected balance. Expected: {:?}, Found: {:?}",
+                initial_balance + amount_to_increase,
+                updated_balance
+            )
+        );
 
         Ok(Self {})
     }
