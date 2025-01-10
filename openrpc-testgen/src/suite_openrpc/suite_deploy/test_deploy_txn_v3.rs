@@ -1,13 +1,16 @@
 use crate::{
     assert_result,
     utils::v7::{
+        accounts::account::ConnectedAccount,
         contract::factory::ContractFactory,
         endpoints::{errors::OpenRpcTestGenError, utils::wait_for_sent_transaction},
+        providers::provider::Provider,
     },
     RandomizableAccountsTrait, RunnableTrait,
 };
 use rand::{rngs::StdRng, RngCore, SeedableRng};
 use starknet_types_core::felt::Felt;
+use starknet_types_rpc::{BlockId, BlockTag};
 
 #[derive(Clone, Debug)]
 pub struct TestCase {}
@@ -38,6 +41,41 @@ impl RunnableTrait for TestCase {
         let result = invoke_result.is_ok();
 
         assert_result!(result);
+
+        let state_update: starknet_types_rpc::MaybePendingStateUpdate<Felt> = test_input
+            .random_paymaster_account
+            .provider()
+            .get_state_update(BlockId::Tag(BlockTag::Latest))
+            .await?;
+
+        let state_update = match state_update {
+            starknet_types_rpc::MaybePendingStateUpdate::Block(block) => Ok(block),
+            starknet_types_rpc::MaybePendingStateUpdate::Pending(_) => {
+                Err(OpenRpcTestGenError::ProviderError(
+                    crate::utils::v7::providers::provider::ProviderError::UnexpectedPendingBlock,
+                ))
+            }
+        }?;
+
+        let state_update_deployed_contract_class_hash = state_update
+            .state_diff
+            .deployed_contracts
+            .get(0)
+            .ok_or(OpenRpcTestGenError::ProviderError(
+                crate::utils::v7::providers::provider::ProviderError::MissingDeployedContract,
+            ))?
+            .class_hash;
+
+        let class_hashes_equality =
+            test_input.declaration_result.class_hash == state_update_deployed_contract_class_hash;
+
+        assert_result!(
+            class_hashes_equality,
+            format!(
+                "Mismatch in deployed contract class hash. Expected: {}, Actual: {}",
+                test_input.declaration_result.class_hash, state_update_deployed_contract_class_hash
+            )
+        );
 
         Ok(Self {})
     }
