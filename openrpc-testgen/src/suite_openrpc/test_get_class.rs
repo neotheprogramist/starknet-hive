@@ -1,5 +1,4 @@
-use serde_json::Value;
-use starknet_types_rpc::{BlockId, BlockTag};
+use std::{path::PathBuf, str::FromStr};
 
 use crate::{
     assert_eq_result, assert_result,
@@ -17,8 +16,9 @@ use crate::{
     },
     RandomizableAccountsTrait, RunnableTrait,
 };
-use std::path::PathBuf;
-use std::str::FromStr;
+use serde_json::Value;
+use starknet_types_rpc::{BlockId, BlockTag};
+use tracing_subscriber::fmt::format;
 
 #[derive(Clone, Debug)]
 pub struct TestCase {}
@@ -28,8 +28,12 @@ impl RunnableTrait for TestCase {
 
     async fn run(test_input: &Self::Input) -> Result<Self, OpenRpcTestGenError> {
         let (flattened_sierra_class, compiled_class_hash) = get_compiled_contract(
-            PathBuf::from_str("target/dev/contracts_contracts_sample_contract_2_HelloStarknet.contract_class.json")?,
-            PathBuf::from_str("target/dev/contracts_contracts_sample_contract_2_HelloStarknet.compiled_contract_class.json")?,
+            PathBuf::from_str(
+                "target/dev/contracts_contracts_smpl9_HelloStarknet.contract_class.json",
+            )?,
+            PathBuf::from_str(
+                "target/dev/contracts_contracts_smpl9_HelloStarknet.compiled_contract_class.json",
+            )?,
         )
         .await?;
 
