@@ -81,8 +81,7 @@ impl SetupableTrait for TestSuiteKatana {
                     "target/dev/contracts_ExecutableAccount.compiled_contract_class.json",
                 )?,
             )
-            .await
-            .unwrap();
+            .await?;
 
         let provider = JsonRpcClient::new(HttpTransport::new(setup_input.urls[0].clone()));
         let chain_id = get_chain_id(&provider).await?;

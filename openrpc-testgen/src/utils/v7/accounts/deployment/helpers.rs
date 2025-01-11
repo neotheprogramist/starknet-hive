@@ -122,11 +122,11 @@ where
                 max_fee
             } else {
                 match deployment.estimate_fee().await {
-                    Ok(max_fee) => Felt::from_dec_str(&max_fee.overall_fee.to_string()).unwrap(),
+                    Ok(max_fee) => Felt::from_dec_str(&max_fee.overall_fee.to_string())?,
                     Err(error) => return Err(CreationError::RpcError(error.to_string())),
                 }
             };
-            let result = deployment.send().await.unwrap();
+            let result = deployment.send().await?;
             Ok(result.transaction_hash)
         }
         DeployAccountVersion::V3 => {
@@ -136,11 +136,11 @@ where
                 max_fee
             } else {
                 match deployment.estimate_fee().await {
-                    Ok(max_fee) => Felt::from_dec_str(&max_fee.overall_fee.to_string()).unwrap(),
+                    Ok(max_fee) => Felt::from_dec_str(&max_fee.overall_fee.to_string())?,
                     Err(error) => return Err(CreationError::RpcError(error.to_string())),
                 }
             };
-            let result = deployment.send().await.unwrap();
+            let result = deployment.send().await?;
             Ok(result.transaction_hash)
         }
     }
