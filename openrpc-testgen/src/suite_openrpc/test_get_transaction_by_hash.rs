@@ -29,8 +29,7 @@ impl RunnableTrait for TestCase {
             Option::None,
             Some(test_input.account_class_hash),
         )
-        .await
-        .unwrap();
+        .await?;
 
         let deploy_account_call = Call {
             to: test_input.udc_address,

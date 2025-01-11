@@ -53,7 +53,7 @@ impl RunnableTrait for TestCase {
 
         assert_result!(result);
 
-        let state_update = match state_update.unwrap() {
+        let state_update = match state_update? {
             starknet_types_rpc::MaybePendingStateUpdate::Block(state_update) => state_update,
             starknet_types_rpc::MaybePendingStateUpdate::Pending(_) => {
                 return Err(OpenRpcTestGenError::ProviderError(

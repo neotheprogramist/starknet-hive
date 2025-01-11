@@ -1,7 +1,9 @@
-use starknet_types_core::felt::Felt;
+use starknet_types_core::felt::{Felt, FromStrError};
 use thiserror::Error;
 
 use crate::utils::v7::providers::provider::ProviderError;
+
+use super::factory::AccountFactoryError;
 
 #[derive(Debug, thiserror::Error)]
 #[error("Not all fields are prepared")]
@@ -45,6 +47,8 @@ pub enum CreationError {
     RpcError(String),
     #[error("Provider error: {0:?}")]
     ProviderError(ProviderError),
+    #[error("AccountFactory error: {0:?}")]
+    AccountFactoryError(String),
     #[error("Invalid acc type {0}")]
     InvalidAccountType(String),
 }
@@ -58,6 +62,21 @@ impl From<ProviderError> for CreationError {
 impl From<String> for CreationError {
     fn from(err: String) -> Self {
         CreationError::RpcError(err)
+    }
+}
+
+impl<T> From<AccountFactoryError<T>> for CreationError
+where
+    T: std::fmt::Debug,
+{
+    fn from(error: AccountFactoryError<T>) -> Self {
+        CreationError::AccountFactoryError(format!("{:?}", error))
+    }
+}
+
+impl From<FromStrError> for CreationError {
+    fn from(error: FromStrError) -> Self {
+        CreationError::RpcError(format!("{:?}", error))
     }
 }
 #[derive(Error, Debug)]

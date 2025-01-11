@@ -75,8 +75,7 @@ impl SetupableTrait for TestSuiteKatanaNoAccountValidation {
                     "target/dev/contracts_ExecutableAccount.compiled_contract_class.json",
                 )?,
             )
-            .await
-            .unwrap();
+            .await?;
 
         let dev_client = DevClient::new(setup_input.urls[0].clone());
 

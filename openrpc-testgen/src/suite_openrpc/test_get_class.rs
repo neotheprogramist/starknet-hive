@@ -98,7 +98,7 @@ impl RunnableTrait for TestCase {
         let declared_class = test_input
             .random_paymaster_account
             .provider()
-            .get_class(BlockId::Tag(BlockTag::Latest), declaration_hash.unwrap())
+            .get_class(BlockId::Tag(BlockTag::Latest), declaration_hash?)
             .await?;
 
         assert_result!(

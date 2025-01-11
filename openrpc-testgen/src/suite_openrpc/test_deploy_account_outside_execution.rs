@@ -39,10 +39,9 @@ impl RunnableTrait for TestCase {
         .await?;
 
         let udc_call = Call {
-            to: Felt::from_hex(
+            to: Felt::from_hex_unchecked(
                 "0x041a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf",
-            )
-            .unwrap(),
+            ),
             selector: get_selector_from_name("deployContract")?,
             calldata: vec![
                 test_input.account_class_hash,
