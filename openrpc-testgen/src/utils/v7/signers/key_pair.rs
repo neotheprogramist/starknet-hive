@@ -15,7 +15,6 @@ pub struct VerifyingKey {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-#[allow(dead_code)]
 #[derive(Debug, thiserror::Error)]
 pub enum KeystoreError {
     #[error("invalid path")]
@@ -23,7 +22,7 @@ pub enum KeystoreError {
     #[error("invalid decrypted secret scalar")]
     InvalidScalar,
 }
-#[allow(dead_code)]
+
 impl SigningKey {
     /// Generates a new key pair from a cryptographically secure RNG.
     pub fn from_random() -> Self {

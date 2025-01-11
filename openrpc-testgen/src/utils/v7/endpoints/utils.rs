@@ -100,7 +100,6 @@ pub fn get_selector_from_name(func_name: &str) -> Result<Felt, NonAsciiNameError
     }
 }
 
-#[allow(dead_code)]
 pub fn get_storage_var_address(var_name: &str, args: &[Felt]) -> Result<Felt, NonAsciiNameError> {
     let var_name_bytes = var_name.as_bytes();
     if var_name_bytes.is_ascii() {

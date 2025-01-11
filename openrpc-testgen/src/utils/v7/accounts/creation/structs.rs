@@ -8,7 +8,6 @@ use starknet_types_rpc::v0_7_1::PriceUnit;
 use crate::utils::v7::signers::key_pair::SigningKey;
 
 use super::create::AccountType;
-#[allow(dead_code)]
 
 fn serialize_as_decimal<S>(value: &Felt, serializer: S) -> Result<S::Ok, S::Error>
 where
@@ -17,7 +16,7 @@ where
     let val = value;
     serializer.serialize_str(&format!("{val:#}"))
 }
-#[allow(dead_code)]
+
 #[derive(Serialize)]
 pub struct AccountCreateResponse {
     pub private_key: Felt,

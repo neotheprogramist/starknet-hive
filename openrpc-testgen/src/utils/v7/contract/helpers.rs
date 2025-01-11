@@ -3,7 +3,6 @@ use starknet_types_core::hash::{Pedersen, StarkHash};
 
 use crate::utils::v7::accounts::deployment::helpers::get_contract_address;
 
-#[allow(dead_code)]
 /// Computes the target contract address for deployments through the Universal Deploy Contract.
 pub fn get_udc_deployed_address(
     salt: Felt,
@@ -27,7 +26,6 @@ pub fn get_udc_deployed_address(
     }
 }
 
-#[allow(dead_code)]
 /// The uniqueness settings for UDC deployments.
 #[derive(Debug, Clone)]
 pub enum UdcUniqueness {

@@ -40,7 +40,7 @@ const QUERY_VERSION_THREE: Felt = Felt::from_raw([
     17407,
     18446744073700081569,
 ]);
-#[allow(dead_code)]
+
 impl<'a, A> ExecutionV1<'a, A> {
     pub fn new(calls: Vec<Call>, account: &'a A) -> Self {
         Self {
@@ -89,7 +89,7 @@ impl<'a, A> ExecutionV1<'a, A> {
         })
     }
 }
-#[allow(dead_code)]
+
 impl<'a, A> ExecutionV3<'a, A> {
     pub fn new(calls: Vec<Call>, account: &'a A) -> Self {
         Self {
@@ -558,7 +558,7 @@ where
             .map_err(AccountError::Provider)
     }
 }
-#[allow(dead_code)]
+
 impl RawExecutionV1 {
     pub fn transaction_hash<E>(
         &self,
@@ -598,7 +598,7 @@ impl RawExecutionV1 {
         self.max_fee
     }
 }
-#[allow(dead_code)]
+
 impl RawExecutionV3 {
     pub fn transaction_hash<E>(
         &self,
@@ -678,7 +678,6 @@ impl RawExecutionV3 {
         self.gas_price
     }
 }
-#[allow(dead_code)]
 impl<'a, A> PreparedExecutionV1<'a, A>
 where
     A: Account,
@@ -694,7 +693,7 @@ where
         )
     }
 }
-#[allow(dead_code)]
+
 impl<'a, A> PreparedExecutionV3<'a, A>
 where
     A: Account,

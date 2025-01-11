@@ -34,7 +34,6 @@ const QUERY_VERSION_TWO: Felt = Felt::from_raw([
     17407,
     18446744073700081601,
 ]);
-#[allow(dead_code)]
 impl<'a, A> DeclarationV2<'a, A> {
     pub fn new(
         contract_class: Arc<ContractClass<Felt>>,
@@ -89,7 +88,6 @@ impl<'a, A> DeclarationV2<'a, A> {
         })
     }
 }
-#[allow(dead_code)]
 impl<'a, A> DeclarationV2<'a, A>
 where
     A: ConnectedAccount + Sync,
@@ -251,7 +249,7 @@ where
             .map_err(AccountError::Provider)
     }
 }
-#[allow(dead_code)]
+
 impl<'a, A> DeclarationV3<'a, A> {
     pub fn new(
         contract_class: ContractClass<Felt>,
@@ -325,7 +323,6 @@ impl<'a, A> DeclarationV3<'a, A> {
     }
 }
 
-#[allow(dead_code)]
 impl<'a, A> DeclarationV3<'a, A>
 where
     A: ConnectedAccount + Sync,
@@ -559,216 +556,6 @@ where
     }
 }
 
-// impl<'a, A> LegacyDeclaration<'a, A> {
-//     pub fn new(contract_class: Arc<DeprecatedContractClass>, account: &'a A) -> Self {
-//         Self {
-//             account,
-//             contract_class,
-//             nonce: None,
-//             max_fee: None,
-//             fee_estimate_multiplier: 1.1,
-//         }
-//     }
-
-//     pub fn nonce(self, nonce: Felt) -> Self {
-//         Self {
-//             nonce: Some(nonce),
-//             ..self
-//         }
-//     }
-
-//     pub fn max_fee(self, max_fee: Felt) -> Self {
-//         Self {
-//             max_fee: Some(max_fee),
-//             ..self
-//         }
-//     }
-
-//     pub fn fee_estimate_multiplier(self, fee_estimate_multiplier: f64) -> Self {
-//         Self {
-//             fee_estimate_multiplier,
-//             ..self
-//         }
-//     }
-
-//     /// Calling this function after manually specifying `nonce` and `max_fee` turns
-//     /// [LegacyDeclaration] into [PreparedLegacyDeclaration]. Returns `Err` if either field is
-//     /// `None`.
-//     pub fn prepared(self) -> Result<PreparedLegacyDeclaration<'a, A>, NotPreparedError> {
-//         let nonce = self.nonce.ok_or(NotPreparedError)?;
-//         let max_fee = self.max_fee.ok_or(NotPreparedError)?;
-
-//         Ok(PreparedLegacyDeclaration {
-//             account: self.account,
-//             inner: RawLegacyDeclaration {
-//                 contract_class: self.contract_class,
-//                 nonce,
-//                 max_fee,
-//             },
-//         })
-//     }
-// }
-
-// impl<'a, A> LegacyDeclaration<'a, A>
-// where
-//     A: ConnectedAccount + Sync,
-// {
-//     pub async fn estimate_fee(&self) -> Result<FeeEstimate, AccountError<A::SignError>> {
-//         // Resolves nonce
-//         let nonce = match self.nonce {
-//             Some(value) => value,
-//             None => self
-//                 .account
-//                 .get_nonce()
-//                 .await
-//                 .map_err(AccountError::Provider)?,
-//         };
-
-//         self.estimate_fee_with_nonce(nonce).await
-//     }
-
-//     pub async fn simulate(
-//         &self,
-//         skip_validate: bool,
-//         skip_fee_charge: bool,
-//     ) -> Result<SimulateTransactionsResult, AccountError<A::SignError>> {
-//         // Resolves nonce
-//         let nonce = match self.nonce {
-//             Some(value) => value,
-//             None => self
-//                 .account
-//                 .get_nonce()
-//                 .await
-//                 .map_err(AccountError::Provider)?,
-//         };
-
-//         self.simulate_with_nonce(nonce, skip_validate, skip_fee_charge)
-//             .await
-//     }
-
-//     pub async fn send(&self) -> Result<ClassAndTxnHash, AccountError<A::SignError>> {
-//         self.prepare().await?.send().await
-//     }
-
-//     async fn prepare(
-//         &self,
-//     ) -> Result<PreparedLegacyDeclaration<'a, A>, AccountError<A::SignError>> {
-//         // Resolves nonce
-//         let nonce = match self.nonce {
-//             Some(value) => value,
-//             None => self
-//                 .account
-//                 .get_nonce()
-//                 .await
-//                 .map_err(AccountError::Provider)?,
-//         };
-
-//         // Resolves max_fee
-//         let max_fee = match self.max_fee {
-//             Some(value) => value,
-//             None => {
-//                 // Obtain the fee estimate
-//                 let fee_estimate = self.estimate_fee_with_nonce(nonce).await?;
-//                 // Convert the overall fee to little-endian bytes
-//                 let overall_fee_bytes = fee_estimate.overall_fee.to_le_bytes();
-
-//                 // Check if the remaining bytes after the first 8 are all zeros
-//                 if overall_fee_bytes.iter().skip(8).any(|&x| x != 0) {
-//                     return Err(AccountError::FeeOutOfRange);
-//                 }
-
-//                 // Convert the first 8 bytes to u64
-//                 let overall_fee_u64 =
-//                     u64::from_le_bytes(overall_fee_bytes[..8].try_into().unwrap());
-
-//                 // Perform necessary operations on overall_fee_u64 and convert to f64 then to u64
-//                 (((overall_fee_u64 as f64) * self.fee_estimate_multiplier) as u64).into()
-//             }
-//         };
-
-//         Ok(PreparedLegacyDeclaration {
-//             account: self.account,
-//             inner: RawLegacyDeclaration {
-//                 contract_class: self.contract_class.clone(),
-//                 nonce,
-//                 max_fee,
-//             },
-//         })
-//     }
-
-//     async fn estimate_fee_with_nonce(
-//         &self,
-//         nonce: Felt,
-//     ) -> Result<FeeEstimate, AccountError<A::SignError>> {
-//         let skip_signature = self.account.is_signer_interactive();
-
-//         let prepared = PreparedLegacyDeclaration {
-//             account: self.account,
-//             inner: RawLegacyDeclaration {
-//                 contract_class: self.contract_class.clone(),
-//                 nonce,
-//                 max_fee: Felt::ZERO,
-//             },
-//         };
-//         let declare = prepared.get_declare_request(true, skip_signature).await?;
-
-//         self.account
-//             .provider()
-//             .estimate_fee_single(
-//                 BroadcastedTxn::Declare(BroadcastedDeclareTxn::V1(declare)),
-//                 self.account.block_id(),
-//             )
-//             .await
-//             .map_err(AccountError::Provider)
-//     }
-
-//     async fn simulate_with_nonce(
-//         &self,
-//         nonce: Felt,
-//         skip_validate: bool,
-//         skip_fee_charge: bool,
-//     ) -> Result<SimulateTransactionsResult, AccountError<A::SignError>> {
-//         let skip_signature = if self.account.is_signer_interactive() {
-//             // If signer is interactive, we would try to minimize signing requests. However, if the
-//             // caller has decided to not skip validation, it's best we still request a real
-//             // signature, as otherwise the simulation would most likely fail.
-//             skip_validate
-//         } else {
-//             // Signing with non-interactive signers is cheap so always request signatures.
-//             false
-//         };
-
-//         let prepared = PreparedLegacyDeclaration {
-//             account: self.account,
-//             inner: RawLegacyDeclaration {
-//                 contract_class: self.contract_class.clone(),
-//                 nonce,
-//                 max_fee: self.max_fee.unwrap_or_default(),
-//             },
-//         };
-//         let declare = prepared.get_declare_request(true, skip_signature).await?;
-
-//         let mut flags = vec![];
-
-//         if !skip_validate {
-//             flags.push(SimulationFlag::Validate);
-//         }
-//         if !skip_fee_charge {
-//             flags.push(SimulationFlag::FeeCharge);
-//         }
-
-//         self.account
-//             .provider()
-//             .simulate_transaction(
-//                 self.account.block_id(),
-//                 BroadcastedTxn::Declare(BroadcastedDeclareTxn::V1(declare)),
-//                 flags,
-//             )
-//             .await
-//             .map_err(AccountError::Provider)
-//     }
-// }
-#[allow(dead_code)]
 impl RawDeclarationV2 {
     pub fn transaction_hash(&self, chain_id: Felt, address: Felt, query_only: bool) -> Felt {
         compute_hash_on_elements(&[
@@ -804,7 +591,7 @@ impl RawDeclarationV2 {
         self.max_fee
     }
 }
-#[allow(dead_code)]
+
 impl RawDeclarationV3 {
     pub fn transaction_hash(&self, chain_id: Felt, address: Felt, _query_only: bool) -> Felt {
         // Main data vector to collect all elements for hashing
@@ -872,47 +659,10 @@ impl RawDeclarationV3 {
     }
 }
 
-// impl RawLegacyDeclaration {
-//     pub fn transaction_hash(
-//         &self,
-//         chain_id: Felt,
-//         address: Felt,
-//         query_only: bool,
-//     ) -> Result<Felt, ComputeClassHashError> {
-//         Ok(compute_hash_on_elements(&[
-//             PREFIX_DECLARE,
-//             if query_only {
-//                 QUERY_VERSION_ONE
-//             } else {
-//                 Felt::ONE
-//             }, // version
-//             address,
-//             Felt::ZERO, // entry_point_selector
-//             compute_hash_on_elements(&[self.contract_class.class_hash()?]),
-//             self.max_fee,
-//             chain_id,
-//             self.nonce,
-//         ]))
-//     }
-
-//     pub fn contract_class(&self) -> &DeprecatedContractClass {
-//         &self.contract_class
-//     }
-
-//     pub fn nonce(&self) -> Felt {
-//         self.nonce
-//     }
-
-//     pub fn max_fee(&self) -> Felt {
-//         self.max_fee
-//     }
-// }
-
 impl<'a, A> PreparedDeclarationV2<'a, A>
 where
     A: Account,
 {
-    #[allow(dead_code)]
     /// Locally calculates the hash of the transaction to be sent from this declaration given the
     /// parameters.
     pub fn transaction_hash(&self, query_only: bool) -> Felt {
@@ -966,7 +716,6 @@ impl<'a, A> PreparedDeclarationV3<'a, A>
 where
     A: Account,
 {
-    #[allow(dead_code)]
     /// Locally calculates the hash of the transaction to be sent from this declaration given the
     /// parameters.
     pub fn transaction_hash(&self, query_only: bool) -> Felt {
@@ -1035,52 +784,3 @@ where
         })
     }
 }
-
-// impl<'a, A> PreparedLegacyDeclaration<'a, A>
-// where
-//     A: Account,
-// {
-//     /// Locally calculates the hash of the transaction to be sent from this declaration given the
-//     /// parameters.
-//     pub fn transaction_hash(&self, query_only: bool) -> Result<Felt, ComputeClassHashError> {
-//         self.inner
-//             .transaction_hash(self.account.chain_id(), self.account.address(), query_only)
-//     }
-// }
-
-// impl<'a, A> PreparedLegacyDeclaration<'a, A>
-// where
-//     A: ConnectedAccount,
-// {
-//     pub async fn send(&self) -> Result<ClassAndTxnHash, AccountError<A::SignError>> {
-//         let tx_request = self.get_declare_request(false, false).await?;
-//         self.account
-//             .provider()
-//             .add_declare_transaction(BroadcastedDeclareTxn::V1(tx_request))
-//             .await
-//             .map_err(AccountError::Provider)
-//     }
-
-//     async fn get_declare_request(
-//         &self,
-//         query_only: bool,
-//         skip_signature: bool,
-//     ) -> Result<BroadcastedDeclareTxnV1, AccountError<A::SignError>> {
-//         let compressed_class = Arc::as_ref(&self.inner.contract_class).clone();
-
-//         Ok(BroadcastedDeclareTxnV1 {
-//             max_fee: self.inner.max_fee,
-//             signature: if skip_signature {
-//                 vec![]
-//             } else {
-//                 self.account
-//                     .sign_legacy_declaration(&self.inner, query_only)
-//                     .await
-//                     .map_err(AccountError::Signing)?
-//             },
-//             nonce: self.inner.nonce,
-//             contract_class: compressed_class,
-//             sender_address: self.account.address(),
-//         })
-//     }
-// }

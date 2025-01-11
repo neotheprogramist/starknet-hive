@@ -39,26 +39,6 @@ const PREFIX_DEPLOY_ACCOUNT: Felt = Felt::from_raw([
     3350261884043292318,
 ]);
 
-#[allow(dead_code)]
-
-/// 2 ^ 128 + 1
-const QUERY_VERSION_ONE: Felt = Felt::from_raw([
-    576460752142433776,
-    18446744073709551584,
-    17407,
-    18446744073700081633,
-]);
-
-#[allow(dead_code)]
-
-/// 2 ^ 128 + 3
-const QUERY_VERSION_THREE: Felt = Felt::from_raw([
-    576460752142432688,
-    18446744073709551584,
-    17407,
-    18446744073700081569,
-]);
-
 /// Cairo string for "STARKNET_CONTRACT_ADDRESS"
 const PREFIX_CONTRACT_ADDRESS: Felt = Felt::from_raw([
     533439743893157637,
@@ -76,7 +56,6 @@ const ADDR_BOUND: NonZeroFelt = NonZeroFelt::from_raw([
 ]);
 
 /// This trait enables deploying account contracts using the `DeployAccount` transaction type.
-#[allow(dead_code)]
 pub trait AccountFactory: Sized {
     type Provider: Provider + Sync;
     type SignError: Error + Send + Sync;
@@ -134,7 +113,6 @@ pub trait AccountFactory: Sized {
 ///
 /// An intermediate type allowing users to optionally specify `nonce` and/or `max_fee`.
 #[must_use]
-#[allow(dead_code)]
 #[derive(Debug)]
 pub struct AccountDeploymentV1<'f, F> {
     factory: &'f F,
@@ -206,7 +184,6 @@ pub enum AccountFactoryError<S> {
     #[error("fee calculation overflow")]
     FeeOutOfRange,
 }
-#[allow(dead_code)]
 impl<'f, F> AccountDeploymentV1<'f, F> {
     pub fn new(salt: Felt, factory: &'f F) -> Self {
         Self {
@@ -256,7 +233,6 @@ impl<'f, F> AccountDeploymentV1<'f, F> {
         })
     }
 }
-#[allow(dead_code)]
 impl<'f, F> AccountDeploymentV3<'f, F> {
     pub fn new(salt: Felt, factory: &'f F) -> Self {
         Self {
@@ -324,7 +300,7 @@ impl<'f, F> AccountDeploymentV3<'f, F> {
         })
     }
 }
-#[allow(dead_code)]
+
 impl<'f, F> AccountDeploymentV1<'f, F>
 where
     F: AccountFactory + Sync,
@@ -517,7 +493,7 @@ where
             .map_err(AccountFactoryError::Provider)
     }
 }
-#[allow(dead_code)]
+
 impl<'f, F> AccountDeploymentV3<'f, F>
 where
     F: AccountFactory + Sync,
@@ -776,7 +752,7 @@ where
             .map_err(AccountFactoryError::Provider)
     }
 }
-#[allow(dead_code)]
+
 impl RawAccountDeploymentV1 {
     pub fn salt(&self) -> Felt {
         self.salt
@@ -790,7 +766,7 @@ impl RawAccountDeploymentV1 {
         self.max_fee
     }
 }
-#[allow(dead_code)]
+
 impl RawAccountDeploymentV3 {
     pub fn salt(&self) -> Felt {
         self.salt

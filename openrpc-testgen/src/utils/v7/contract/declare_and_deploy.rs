@@ -25,7 +25,7 @@ use crate::utils::v7::{
     providers::jsonrpc::{HttpTransport, JsonRpcClient},
     signers::local_wallet::LocalWallet,
 };
-#[allow(dead_code)]
+
 pub async fn decalare_and_deploy(
     url: Url,
     sierra_path: PathBuf,
