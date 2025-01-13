@@ -1,12 +1,14 @@
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use crate::utils::v7::accounts::account::{Account, ConnectedAccount};
+use crate::utils::v7::accounts::account::{Account, AccountError, ConnectedAccount};
 use crate::utils::v7::contract::factory::ContractFactory;
-use crate::utils::v7::endpoints::declare_contract::get_compiled_contract;
+use crate::utils::v7::endpoints::declare_contract::{
+    extract_class_hash_from_error, get_compiled_contract, parse_class_hash_from_error, RunnerError,
+};
 use crate::utils::v7::endpoints::errors::CallError;
 use crate::utils::v7::endpoints::utils::wait_for_sent_transaction;
-use crate::utils::v7::providers::provider::Provider;
+use crate::utils::v7::providers::provider::{Provider, ProviderError};
 use crate::{assert_result, RandomizableAccountsTrait};
 use crate::{utils::v7::endpoints::errors::OpenRpcTestGenError, RunnableTrait};
 use rand::rngs::StdRng;
@@ -31,20 +33,63 @@ impl RunnableTrait for TestCase {
         )
         .await?;
 
-        let declaration_result = test_input
+        let declaration_result = match test_input
             .random_paymaster_account
             .declare_v3(flattened_sierra_class.clone(), compiled_class_hash)
             .send()
-            .await?;
+            .await
+        {
+            Ok(result) => {
+                wait_for_sent_transaction(
+                    result.transaction_hash,
+                    &test_input.random_paymaster_account.random_accounts()?,
+                )
+                .await?;
 
-        wait_for_sent_transaction(
-            declaration_result.transaction_hash,
-            &test_input.random_paymaster_account.random_accounts()?,
-        )
-        .await?;
+                Ok(result.class_hash)
+            }
+            Err(AccountError::Signing(sign_error)) => {
+                if sign_error.to_string().contains("is already declared") {
+                    Ok(parse_class_hash_from_error(&sign_error.to_string())?)
+                } else {
+                    Err(OpenRpcTestGenError::RunnerError(
+                        RunnerError::AccountFailure(format!(
+                            "Transaction execution error: {}",
+                            sign_error
+                        )),
+                    ))
+                }
+            }
+
+            Err(AccountError::Provider(ProviderError::Other(starkneterror))) => {
+                if starkneterror.to_string().contains("is already declared") {
+                    Ok(parse_class_hash_from_error(&starkneterror.to_string())?)
+                } else {
+                    Err(OpenRpcTestGenError::RunnerError(
+                        RunnerError::AccountFailure(format!(
+                            "Transaction execution error: {}",
+                            starkneterror
+                        )),
+                    ))
+                }
+            }
+            Err(e) => {
+                let full_error_message = format!("{:?}", e);
+
+                if full_error_message.contains("is already declared") {
+                    Ok(extract_class_hash_from_error(&full_error_message)?)
+                } else {
+                    let full_error_message = format!("{:?}", e);
+
+                    return Err(OpenRpcTestGenError::AccountError(AccountError::Other(
+                        full_error_message,
+                    )));
+                }
+            }
+        }?;
 
         let factory = ContractFactory::new(
-            declaration_result.class_hash,
+            declaration_result,
             test_input.random_paymaster_account.random_accounts()?,
         );
 
@@ -105,10 +150,10 @@ impl RunnableTrait for TestCase {
         let contract_class_hash = contract_class_hash?;
 
         assert_result!(
-            contract_class_hash == declaration_result.class_hash,
+            contract_class_hash == declaration_result,
             format!(
                 "Class hash mismatch: expected {}, got {}",
-                declaration_result.class_hash, contract_class_hash
+                declaration_result, contract_class_hash
             )
         );
 

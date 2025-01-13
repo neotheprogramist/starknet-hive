@@ -1,7 +1,9 @@
 use std::path::PathBuf;
 
 use starknet_types_core::felt::Felt;
-use starknet_types_rpc::{BlockId, ClassAndTxnHash, DeclareTxn, EventFilterWithPageRequest, Txn};
+use starknet_types_rpc::{
+    BlockId, BlockTag, ClassAndTxnHash, DeclareTxn, EventFilterWithPageRequest, Txn,
+};
 use tracing::info;
 
 use super::RandomSingleOwnerAccount;
@@ -102,18 +104,14 @@ impl SetupableTrait for TestSuiteDeploy {
 
                     let filter = EventFilterWithPageRequest {
                         address: None,
-                        from_block: Some(BlockId::Number(322421)),
-                        to_block: Some(BlockId::Number(322421)),
+                        from_block: Some(BlockId::Number(1)),
+                        to_block: Some(BlockId::Tag(BlockTag::Latest)),
                         keys: Some(vec![vec![]]),
                         chunk_size: 100,
                         continuation_token: None,
                     };
 
                     let provider = setup_input.random_paymaster_account.provider();
-                    let random_account_address = setup_input
-                        .random_paymaster_account
-                        .random_accounts()?
-                        .address();
 
                     let mut continuation_token = None;
                     let mut found_txn_hash = None;
@@ -125,17 +123,14 @@ impl SetupableTrait for TestSuiteDeploy {
                         let events_chunk = provider.get_events(current_filter).await?;
 
                         for event in events_chunk.events {
-                            if event.event.data.contains(&random_account_address) {
-                                let txn_hash = event.transaction_hash;
+                            let txn_hash = event.transaction_hash;
 
-                                let txn_details =
-                                    provider.get_transaction_by_hash(txn_hash).await?;
+                            let txn_details = provider.get_transaction_by_hash(txn_hash).await?;
 
-                                if let Txn::Declare(DeclareTxn::V3(declare_txn)) = txn_details {
-                                    if declare_txn.class_hash == class_hash {
-                                        found_txn_hash = Some(txn_hash);
-                                        break;
-                                    }
+                            if let Txn::Declare(DeclareTxn::V3(declare_txn)) = txn_details {
+                                if declare_txn.class_hash == class_hash {
+                                    found_txn_hash = Some(txn_hash);
+                                    break;
                                 }
                             }
                         }
