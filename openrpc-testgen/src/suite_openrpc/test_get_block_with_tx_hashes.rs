@@ -17,7 +17,6 @@ use starknet_types_rpc::{BlockId, BlockTag};
 #[derive(Clone, Debug)]
 pub struct TestCase {}
 
-// TODO create two cases - pending / latest
 impl RunnableTrait for TestCase {
     type Input = super::TestSuiteOpenRpc;
 
