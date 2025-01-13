@@ -66,7 +66,6 @@ impl SetupableTrait for TestSuiteDeploy {
                 Ok(result)
             }
             Err(AccountError::Signing(sign_error)) => {
-                println!("{}", sign_error);
                 if sign_error.to_string().contains("is already declared") {
                     Ok(ClassAndTxnHash {
                         class_hash: parse_class_hash_from_error(&sign_error.to_string())?,
@@ -83,7 +82,6 @@ impl SetupableTrait for TestSuiteDeploy {
             }
 
             Err(AccountError::Provider(ProviderError::Other(starkneterror))) => {
-                println!("{}", starkneterror);
                 if starkneterror.to_string().contains("is already declared") {
                     Ok(ClassAndTxnHash {
                         class_hash: parse_class_hash_from_error(&starkneterror.to_string())?,
@@ -99,9 +97,7 @@ impl SetupableTrait for TestSuiteDeploy {
                 }
             }
             Err(e) => {
-                println!("XD, got error: {}", e);
                 let full_error_message = format!("{:?}", e);
-                println!("full_error_message: {}", full_error_message);
 
                 if full_error_message.contains("is already declared") {
                     let class_hash = extract_class_hash_from_error(&full_error_message)?;
@@ -116,10 +112,6 @@ impl SetupableTrait for TestSuiteDeploy {
                     };
 
                     let provider = setup_input.random_paymaster_account.provider();
-                    let random_account_address = setup_input
-                        .random_paymaster_account
-                        .random_accounts()?
-                        .address();
 
                     let mut continuation_token = None;
                     let mut found_txn_hash = None;
@@ -129,14 +121,11 @@ impl SetupableTrait for TestSuiteDeploy {
                         current_filter.continuation_token = continuation_token.clone();
 
                         let events_chunk = provider.get_events(current_filter).await?;
-                        print!("events_chunk: {:#?}\n", events_chunk);
 
                         for event in events_chunk.events {
                             let txn_hash = event.transaction_hash;
 
                             let txn_details = provider.get_transaction_by_hash(txn_hash).await?;
-
-                            println!("txn_details: {:#?}\n", txn_details);
 
                             if let Txn::Declare(DeclareTxn::V3(declare_txn)) = txn_details {
                                 if declare_txn.class_hash == class_hash {
