@@ -1,7 +1,9 @@
 use std::path::PathBuf;
 
 use starknet_types_core::felt::Felt;
-use starknet_types_rpc::{BlockId, ClassAndTxnHash, DeclareTxn, EventFilterWithPageRequest, Txn};
+use starknet_types_rpc::{
+    BlockId, BlockTag, ClassAndTxnHash, DeclareTxn, EventFilterWithPageRequest, Txn,
+};
 use tracing::info;
 
 use super::RandomSingleOwnerAccount;
@@ -64,6 +66,7 @@ impl SetupableTrait for TestSuiteDeploy {
                 Ok(result)
             }
             Err(AccountError::Signing(sign_error)) => {
+                println!("{}", sign_error);
                 if sign_error.to_string().contains("is already declared") {
                     Ok(ClassAndTxnHash {
                         class_hash: parse_class_hash_from_error(&sign_error.to_string())?,
@@ -80,6 +83,7 @@ impl SetupableTrait for TestSuiteDeploy {
             }
 
             Err(AccountError::Provider(ProviderError::Other(starkneterror))) => {
+                println!("{}", starkneterror);
                 if starkneterror.to_string().contains("is already declared") {
                     Ok(ClassAndTxnHash {
                         class_hash: parse_class_hash_from_error(&starkneterror.to_string())?,
@@ -95,15 +99,17 @@ impl SetupableTrait for TestSuiteDeploy {
                 }
             }
             Err(e) => {
+                println!("XD, got error: {}", e);
                 let full_error_message = format!("{:?}", e);
+                println!("full_error_message: {}", full_error_message);
 
                 if full_error_message.contains("is already declared") {
                     let class_hash = extract_class_hash_from_error(&full_error_message)?;
 
                     let filter = EventFilterWithPageRequest {
                         address: None,
-                        from_block: Some(BlockId::Number(322421)),
-                        to_block: Some(BlockId::Number(322421)),
+                        from_block: Some(BlockId::Number(1)),
+                        to_block: Some(BlockId::Tag(BlockTag::Latest)),
                         keys: Some(vec![vec![]]),
                         chunk_size: 100,
                         continuation_token: None,
@@ -123,19 +129,19 @@ impl SetupableTrait for TestSuiteDeploy {
                         current_filter.continuation_token = continuation_token.clone();
 
                         let events_chunk = provider.get_events(current_filter).await?;
+                        print!("events_chunk: {:#?}\n", events_chunk);
 
                         for event in events_chunk.events {
-                            if event.event.data.contains(&random_account_address) {
-                                let txn_hash = event.transaction_hash;
+                            let txn_hash = event.transaction_hash;
 
-                                let txn_details =
-                                    provider.get_transaction_by_hash(txn_hash).await?;
+                            let txn_details = provider.get_transaction_by_hash(txn_hash).await?;
 
-                                if let Txn::Declare(DeclareTxn::V3(declare_txn)) = txn_details {
-                                    if declare_txn.class_hash == class_hash {
-                                        found_txn_hash = Some(txn_hash);
-                                        break;
-                                    }
+                            println!("txn_details: {:#?}\n", txn_details);
+
+                            if let Txn::Declare(DeclareTxn::V3(declare_txn)) = txn_details {
+                                if declare_txn.class_hash == class_hash {
+                                    found_txn_hash = Some(txn_hash);
+                                    break;
                                 }
                             }
                         }

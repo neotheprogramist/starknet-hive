@@ -3,12 +3,16 @@ use std::{path::PathBuf, str::FromStr};
 use crate::{
     assert_result,
     utils::v7::{
-        accounts::account::{Account, ConnectedAccount},
+        accounts::account::{Account, AccountError, ConnectedAccount},
         endpoints::{
-            declare_contract::get_compiled_contract, errors::OpenRpcTestGenError,
+            declare_contract::{
+                extract_class_hash_from_error, get_compiled_contract, parse_class_hash_from_error,
+                RunnerError,
+            },
+            errors::OpenRpcTestGenError,
             utils::wait_for_sent_transaction,
         },
-        providers::provider::Provider,
+        providers::provider::{Provider, ProviderError},
     },
     RandomizableAccountsTrait, RunnableTrait,
 };
@@ -31,46 +35,90 @@ impl RunnableTrait for TestCase {
         )
         .await?;
 
-        let declaration_result = test_input
+        match test_input
             .random_paymaster_account
-            .declare_v3(flattened_sierra_class, compiled_class_hash)
+            .declare_v3(flattened_sierra_class.clone(), compiled_class_hash)
             .send()
-            .await?;
+            .await
+        {
+            Ok(class_and_txn_hash) => {
+                wait_for_sent_transaction(
+                    class_and_txn_hash.transaction_hash.clone(),
+                    &test_input.random_paymaster_account.random_accounts()?,
+                )
+                .await?;
 
-        wait_for_sent_transaction(
-            declaration_result.transaction_hash,
-            &test_input.random_paymaster_account.random_accounts()?,
-        )
-        .await?;
+                let block_txs = test_input
+                    .random_paymaster_account
+                    .provider()
+                    .get_block_with_txs(BlockId::Tag(BlockTag::Latest))
+                    .await;
 
-        let block_txs = test_input
-            .random_paymaster_account
-            .provider()
-            .get_block_with_txs(BlockId::Tag(BlockTag::Latest))
-            .await;
+                let result = block_txs.is_ok();
 
-        let result = block_txs.is_ok();
+                assert_result!(result);
 
-        assert_result!(result);
+                let block_txs = block_txs?;
+                let block_with_txs = match block_txs {
+                starknet_types_rpc::MaybePendingBlockWithTxs::Block(block_with_txs) => block_with_txs,
+                starknet_types_rpc::MaybePendingBlockWithTxs::Pending(_) => {
+                    return Err(OpenRpcTestGenError::ProviderError(
+                        crate::utils::v7::providers::provider::ProviderError::UnexpectedPendingBlock,
+                    ))
+                }
+            };
 
-        let block_txs = block_txs?;
-        let block_with_txs = match block_txs {
-            starknet_types_rpc::MaybePendingBlockWithTxs::Block(block_with_txs) => block_with_txs,
-            starknet_types_rpc::MaybePendingBlockWithTxs::Pending(_) => {
-                return Err(OpenRpcTestGenError::ProviderError(
-                    crate::utils::v7::providers::provider::ProviderError::UnexpectedPendingBlock,
-                ))
+                assert_result!(
+                    block_with_txs.transactions[0].transaction_hash
+                        == class_and_txn_hash.transaction_hash,
+                    format!(
+                        "Mismatch in transaction hash. Expected: {}, Found: {}.",
+                        class_and_txn_hash.transaction_hash,
+                        block_with_txs.transactions[0].transaction_hash
+                    )
+                );
+
+                Ok(class_and_txn_hash.class_hash)
             }
-        };
+            Err(AccountError::Signing(sign_error)) => {
+                if sign_error.to_string().contains("is already declared") {
+                    Ok(parse_class_hash_from_error(&sign_error.to_string())?)
+                } else {
+                    Err(OpenRpcTestGenError::RunnerError(
+                        RunnerError::AccountFailure(format!(
+                            "Transaction execution error: {}",
+                            sign_error
+                        )),
+                    ))
+                }
+            }
 
-        assert_result!(
-            block_with_txs.transactions[0].transaction_hash == declaration_result.transaction_hash,
-            format!(
-                "Mismatch in transaction hash. Expected: {}, Found: {}.",
-                declaration_result.transaction_hash,
-                block_with_txs.transactions[0].transaction_hash
-            )
-        );
+            Err(AccountError::Provider(ProviderError::Other(starkneterror))) => {
+                if starkneterror.to_string().contains("is already declared") {
+                    Ok(parse_class_hash_from_error(&starkneterror.to_string())?)
+                } else {
+                    Err(OpenRpcTestGenError::RunnerError(
+                        RunnerError::AccountFailure(format!(
+                            "Transaction execution error: {}",
+                            starkneterror
+                        )),
+                    ))
+                }
+            }
+            Err(e) => {
+                let full_error_message = format!("{:?}", e);
+
+                if full_error_message.contains("is already declared") {
+                    Ok(extract_class_hash_from_error(&full_error_message)?)
+                } else {
+                    let full_error_message = format!("{:?}", e);
+
+                    return Err(OpenRpcTestGenError::AccountError(AccountError::Other(
+                        full_error_message,
+                    )));
+                }
+            }
+        }?;
 
         Ok(Self {})
     }
