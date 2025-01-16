@@ -30,6 +30,7 @@ pub mod test_get_class_at;
 pub mod test_get_class_hash_at;
 pub mod test_get_txn_by_block_id_and_index_deploy_v1;
 pub mod test_get_txn_by_block_id_and_index_deploy_v3;
+pub mod test_tmp;
 
 #[derive(Clone, Debug)]
 pub struct TestSuiteDeploy {

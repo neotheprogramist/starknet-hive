@@ -1,4 +1,4 @@
-use crate::utils::v7::accounts::account::{Account, ConnectedAccount};
+use crate::utils::v7::accounts::account::{starknet_keccak, Account, ConnectedAccount};
 use crate::utils::v7::endpoints::utils::wait_for_sent_transaction;
 use crate::utils::v7::providers::provider::Provider;
 use crate::{assert_result, RandomizableAccountsTrait};
@@ -25,6 +25,15 @@ impl RunnableTrait for TestCase {
             Felt::from_hex("0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead")?;
         let transfer_amount = Felt::from_hex("0xfffffffffffffff")?;
         let sender = test_input.random_paymaster_account.random_accounts()?;
+
+        let estimate_fee = sender
+            .execute_v3(vec![Call {
+                to: strk_address,
+                selector: get_selector_from_name("transfer")?,
+                calldata: vec![receiptent_address, transfer_amount, Felt::ZERO],
+            }])
+            .estimate_fee()
+            .await?;
 
         let transfer_execution = sender
             .execute_v3(vec![Call {
@@ -62,6 +71,8 @@ impl RunnableTrait for TestCase {
             .get_events(filter)
             .await?;
 
+        println!("events: {:#?}", events);
+
         assert_result!(
             events.continuation_token.is_none() == true,
             format!(
@@ -79,6 +90,7 @@ impl RunnableTrait for TestCase {
             )
         );
 
+        // First event
         assert_result!(
             events.events[0].event.from_address == strk_address,
             format!(
@@ -104,11 +116,20 @@ impl RunnableTrait for TestCase {
             )
         );
 
+        let keccak_transfer = starknet_keccak("Transfer".as_bytes());
+        assert_result!(
+            events.events[0].event.keys[0] == keccak_transfer,
+            format!(
+                "Invalid keccak transfer in event keys, expected {}, got {}",
+                keccak_transfer, events.events[0].event.keys[0]
+            )
+        );
+
         let sender_address = sender.address();
         assert_result!(
             events.events[0].event.keys[1] == sender_address,
             format!(
-                "Invalid sender address event keys, expected {}, got {}",
+                "Invalid sender address in event keys, expected {}, got {}",
                 sender_address, events.events[0].event.keys[1]
             )
         );
@@ -147,13 +168,57 @@ impl RunnableTrait for TestCase {
             )
         );
 
+        // Second event
+        assert_result!(
+            events.events[1].event.from_address == strk_address,
+            format!(
+                "Invalid from address in event, expected {}, got {}",
+                strk_address, events.events[0].event.from_address
+            )
+        );
+
+        assert_result!(
+            events.events[0].event.data[0] == estimate_fee.overall_fee,
+            format!(
+                "Invalid transfer amount in event data, expected {}, got {}",
+                estimate_fee.overall_fee, events.events[1].event.data[0]
+            )
+        );
+
+        assert_result!(
+            events.events[0].event.data[1] == Felt::ZERO,
+            format!(
+                "Invalid transfer amount in event data, expected {}, got {}",
+                Felt::ZERO,
+                events.events[1].event.data[1]
+            )
+        );
+
+        assert_result!(
+            events.events[1].event.keys[0] == keccak_transfer,
+            format!(
+                "Invalid keccak transfer in event keys, expected {}, got {}",
+                keccak_transfer, events.events[0].event.keys[0]
+            )
+        );
+
         assert_result!(
             events.events[1].event.keys[1] == sender_address,
             format!(
-                "Invalid sender address event keys, expected {}, got {}",
+                "Invalid sender address in event keys, expected {}, got {}",
                 sender_address, events.events[1].event.keys[1]
             )
         );
+
+        let sequencer_address = Felt::from_hex("0x123")?;
+        assert_result!(
+            events.events[1].event.keys[2] == sequencer_address,
+            format!(
+                "Invalid sequencer address in event keys, expected {}, got {}",
+                sequencer_address, events.events[1].event.keys[2]
+            )
+        );
+
         assert_result!(
             events.events[1].block_hash == Some(block_hash_and_number.block_hash),
             format!(
