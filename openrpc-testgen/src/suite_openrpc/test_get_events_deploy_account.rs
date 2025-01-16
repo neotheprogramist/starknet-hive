@@ -179,13 +179,13 @@ impl RunnableTrait for TestCase {
             )
         );
 
-        // assert_result!(
-        //     events.events[1].event.data[0] == estimate_fee.overall_fee,
-        //     format!(
-        //         "Invalid fee amount in event data, expected {}, got {}",
-        //         estimate_fee.overall_fee, events.events[1].event.data[0]
-        //     )
-        // );
+        assert_result!(
+            events.events[1].event.data[0] == account_data.max_fee,
+            format!(
+                "Invalid fee amount in event data, expected {}, got {}",
+                account_data.max_fee, events.events[1].event.data[0]
+            )
+        );
 
         assert_result!(
             events.events[1].event.data[1] == Felt::ZERO,
