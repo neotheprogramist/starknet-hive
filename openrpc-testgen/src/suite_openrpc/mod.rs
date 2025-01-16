@@ -46,6 +46,7 @@ pub mod test_get_block_with_txs;
 pub mod test_get_chain_id;
 pub mod test_get_class;
 pub mod test_get_events_declare;
+pub mod test_get_events_deploy;
 pub mod test_get_events_transfer;
 pub mod test_get_nonce;
 pub mod test_get_state_update;

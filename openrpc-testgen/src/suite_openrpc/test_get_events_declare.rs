@@ -36,13 +36,13 @@ impl RunnableTrait for TestCase {
             .estimate_fee()
             .await?;
 
-        let declaration_hash = sender
+        let declaration_result = sender
             .declare_v3(flattened_sierra_class.clone(), compiled_class_hash)
             .send()
             .await?;
 
         wait_for_sent_transaction(
-            declaration_hash.transaction_hash,
+            declaration_result.transaction_hash,
             &test_input.random_paymaster_account.random_accounts()?,
         )
         .await?;
@@ -150,10 +150,10 @@ impl RunnableTrait for TestCase {
         );
 
         assert_result!(
-            events.events[0].transaction_hash == declaration_hash.transaction_hash,
+            events.events[0].transaction_hash == declaration_result.transaction_hash,
             format!(
                 "Invalid transaction hash in event, expected {:?}, got {:?}",
-                declaration_hash.transaction_hash, events.events[0].transaction_hash
+                declaration_result.transaction_hash, events.events[0].transaction_hash
             )
         );
 
