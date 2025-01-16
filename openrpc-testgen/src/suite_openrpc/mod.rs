@@ -45,6 +45,7 @@ pub mod test_get_block_with_tx_hashes;
 pub mod test_get_block_with_txs;
 pub mod test_get_chain_id;
 pub mod test_get_class;
+pub mod test_get_events_transfer;
 pub mod test_get_nonce;
 pub mod test_get_state_update;
 pub mod test_get_transaction_by_hash;
