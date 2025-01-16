@@ -38,7 +38,7 @@ impl RunnableTrait for TestCase {
         )
         .await?;
 
-        // Call with invalid selector should return ContractError
+        // Call with invalid contract address should return ContractNotFound
         let balance = test_input
             .random_paymaster_account
             .provider()
