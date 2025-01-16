@@ -27,6 +27,7 @@ pub mod test_get_txn_receipt;
 pub mod test_get_txn_status;
 pub mod test_invoke_contract_v1;
 pub mod test_invoke_contract_v3;
+pub mod test_invoke_trace_v3;
 
 pub struct TestSuiteContractCalls {
     pub random_paymaster_account: RandomSingleOwnerAccount,
