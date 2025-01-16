@@ -178,17 +178,17 @@ impl RunnableTrait for TestCase {
         );
 
         assert_result!(
-            events.events[0].event.data[0] == estimate_fee.overall_fee,
+            events.events[1].event.data[0] == estimate_fee.overall_fee,
             format!(
-                "Invalid transfer amount in event data, expected {}, got {}",
+                "Invalid fee amount in event data, expected {}, got {}",
                 estimate_fee.overall_fee, events.events[1].event.data[0]
             )
         );
 
         assert_result!(
-            events.events[0].event.data[1] == Felt::ZERO,
+            events.events[1].event.data[1] == Felt::ZERO,
             format!(
-                "Invalid transfer amount in event data, expected {}, got {}",
+                "Invalid fee amount in event data, expected {}, got {}",
                 Felt::ZERO,
                 events.events[1].event.data[1]
             )
