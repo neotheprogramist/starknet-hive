@@ -100,8 +100,12 @@ impl RunnableTrait for TestCase {
         account.set_block_id(BlockId::Tag(BlockTag::Pending));
 
         let (flattened_sierra_class, compiled_class_hash) = get_compiled_contract(
-            PathBuf::from_str("target/dev/contracts_contracts_sample_contract_2_HelloStarknet.contract_class.json")?,
-            PathBuf::from_str("target/dev/contracts_contracts_sample_contract_2_HelloStarknet.compiled_contract_class.json")?,
+            PathBuf::from_str(
+                "target/dev/contracts_contracts_smpl12_HelloStarknet.contract_class.json",
+            )?,
+            PathBuf::from_str(
+                "target/dev/contracts_contracts_smpl12_HelloStarknet.compiled_contract_class.json",
+            )?,
         )
         .await?;
 
