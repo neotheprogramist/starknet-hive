@@ -68,8 +68,6 @@ impl RunnableTrait for TestCase {
             .get_events(filter)
             .await?;
 
-        println!("events: {events:#?}");
-
         assert_result!(
             events.events.len() == 1,
             format!(

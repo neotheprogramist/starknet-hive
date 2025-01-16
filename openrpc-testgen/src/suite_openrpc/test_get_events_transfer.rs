@@ -71,8 +71,6 @@ impl RunnableTrait for TestCase {
             .get_events(filter)
             .await?;
 
-        println!("events: {:#?}", events);
-
         assert_result!(
             events.continuation_token.is_none(),
             format!(
