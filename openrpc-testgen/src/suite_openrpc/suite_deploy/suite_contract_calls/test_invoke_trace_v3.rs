@@ -45,7 +45,6 @@ impl RunnableTrait for TestCase {
             .await;
 
         let result = trace_result.is_ok();
-        println!("{:?}", trace_result);
 
         assert_result!(result);
 
