@@ -89,7 +89,7 @@ impl RunnableTrait for TestCase {
         );
 
         let provider = test_input.random_paymaster_account.provider();
-        let chain_id = get_chain_id(&provider).await?;
+        let chain_id = get_chain_id(provider).await?;
         let mut account = SingleOwnerAccount::new(
             &provider,
             LocalWallet::from(account.signing_key),
