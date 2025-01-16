@@ -74,7 +74,7 @@ impl RunnableTrait for TestCase {
         println!("events: {:#?}", events);
 
         assert_result!(
-            events.continuation_token.is_none() == true,
+            events.continuation_token.is_none(),
             format!(
                 "No continuation token expected. Expected None, got {:?}",
                 events.continuation_token

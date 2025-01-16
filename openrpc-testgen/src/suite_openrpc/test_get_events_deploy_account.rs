@@ -115,7 +115,7 @@ impl RunnableTrait for TestCase {
         );
 
         assert_result!(
-            events.events[0].event.data.is_empty() == true,
+            events.events[0].event.data.is_empty(),
             format!(
                 "Expected event data to be empty, expected {}, got {}",
                 0,
