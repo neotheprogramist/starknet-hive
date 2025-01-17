@@ -27,7 +27,7 @@ pub mod test_get_txn_receipt;
 pub mod test_get_txn_status;
 pub mod test_invoke_contract_v1;
 pub mod test_invoke_contract_v3;
-pub mod test_invoke_trace_v3;
+pub mod test_invoke_v3_trace;
 pub mod test_trace_block_txn;
 
 pub struct TestSuiteContractCalls {
