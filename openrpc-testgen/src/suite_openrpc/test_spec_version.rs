@@ -7,6 +7,9 @@ use crate::{
     RunnableTrait,
 };
 
+/// These tests check node compatibility with spec version 0.7.1
+const EXPECTED_SPEC_VERSION: &str = "0.7.1";
+
 #[derive(Clone, Debug)]
 pub struct TestCase {}
 
@@ -26,13 +29,11 @@ impl RunnableTrait for TestCase {
 
         let spec_version = spec_version?;
 
-        let expected_spec_version = "0.7.1".to_string();
-
         assert_result!(
-            spec_version == expected_spec_version,
+            spec_version == EXPECTED_SPEC_VERSION,
             format!(
                 "Expected spec version to be {}, but got {}",
-                expected_spec_version, spec_version
+                EXPECTED_SPEC_VERSION, spec_version
             )
         );
 
