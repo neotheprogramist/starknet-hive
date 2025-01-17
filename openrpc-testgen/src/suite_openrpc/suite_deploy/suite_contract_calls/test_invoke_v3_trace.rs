@@ -70,7 +70,7 @@ impl RunnableTrait for TestCase {
         let account_address = account.address();
         let deployed_contract_address = test_input.deployed_contract_address;
 
-        let entry_point_type = EntryPointType::External;
+        let entry_point_type_external = EntryPointType::External;
 
         let (function_invocation, invoke_trace) = match trace {
             TransactionTrace::Invoke(invoke_trace) => match invoke_trace.clone().execute_invocation
@@ -170,10 +170,10 @@ impl RunnableTrait for TestCase {
         );
 
         assert_result!(
-            function_invocation.calls[0].entry_point_type == entry_point_type,
+            function_invocation.calls[0].entry_point_type == entry_point_type_external,
             format!(
                 "Entry point type mismatch in nested call: expected {:?}, but found {:?}",
-                entry_point_type, function_invocation.calls[0].entry_point_type
+                entry_point_type_external, function_invocation.calls[0].entry_point_type
             )
         );
 
