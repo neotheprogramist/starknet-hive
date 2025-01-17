@@ -14,12 +14,12 @@ use crate::{
             errors::OpenRpcTestGenError,
             utils::{get_selector_from_name, wait_for_sent_transaction},
         },
-        providers::provider::Provider,
+        providers::provider::{Provider, ProviderError},
     },
     RandomizableAccountsTrait, RunnableTrait,
 };
 use starknet_types_core::felt::Felt;
-use starknet_types_rpc::{BlockId, EventFilterWithPageRequest};
+use starknet_types_rpc::{BlockId, BlockTag, EventFilterWithPageRequest, MaybePendingBlockWithTxs};
 
 #[derive(Clone, Debug)]
 pub struct TestCase {}
@@ -213,7 +213,21 @@ impl RunnableTrait for TestCase {
             )
         );
 
-        let sequencer_address = Felt::from_hex("0x123")?;
+        let maybe_pending_block_with_txs = test_input
+            .random_paymaster_account
+            .provider()
+            .get_block_with_txs(BlockId::Tag(BlockTag::Latest))
+            .await?;
+        let sequencer_address = match maybe_pending_block_with_txs {
+            MaybePendingBlockWithTxs::Block(block_with_txs) => {
+                block_with_txs.block_header.sequencer_address
+            }
+            _ => {
+                return Err(OpenRpcTestGenError::ProviderError(
+                    ProviderError::UnexpectedPendingBlock,
+                ))
+            }
+        };
         assert_result!(
             events.events[1].event.keys[2] == sequencer_address,
             format!(

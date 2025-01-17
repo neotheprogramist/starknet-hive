@@ -1,4 +1,3 @@
-use crypto_bigint::rand_core::block;
 use starknet_types_rpc::{BlockId, MaybePendingBlockWithTxs, SyncingStatus};
 
 use crate::{
