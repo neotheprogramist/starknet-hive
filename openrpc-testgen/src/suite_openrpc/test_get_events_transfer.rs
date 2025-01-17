@@ -69,7 +69,13 @@ impl RunnableTrait for TestCase {
             .random_paymaster_account
             .provider()
             .get_events(filter)
-            .await?;
+            .await;
+
+        let result = events.is_ok();
+
+        assert_result!(result);
+
+        let events = events?;
 
         assert_result!(
             events.continuation_token.is_none(),

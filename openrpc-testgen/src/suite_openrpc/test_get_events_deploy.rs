@@ -93,7 +93,13 @@ impl RunnableTrait for TestCase {
             .random_paymaster_account
             .provider()
             .get_events(filter)
-            .await?;
+            .await;
+
+        let result = events.is_ok();
+
+        assert_result!(result);
+
+        let events = events?;
 
         let deployment_receipt = test_input
             .random_paymaster_account
