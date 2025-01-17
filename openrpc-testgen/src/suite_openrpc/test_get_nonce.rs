@@ -81,8 +81,13 @@ impl RunnableTrait for TestCase {
             .random_paymaster_account
             .provider()
             .get_nonce(BlockId::Tag(BlockTag::Latest), account.address)
-            .await?;
+            .await;
 
+        let result = initial_account_nonce.is_ok();
+
+        assert_result!(result);
+
+        let initial_account_nonce = initial_account_nonce?;
         assert_result!(
             initial_account_nonce == Felt::ONE,
             "New account - expected nonce to be 1"
@@ -124,7 +129,13 @@ impl RunnableTrait for TestCase {
             .random_paymaster_account
             .provider()
             .get_nonce(BlockId::Tag(BlockTag::Latest), account.address())
-            .await?;
+            .await;
+
+        let result = updated_account_nonce.is_ok();
+
+        assert_result!(result);
+
+        let updated_account_nonce = updated_account_nonce?;
 
         assert_result!(
             updated_account_nonce == Felt::TWO,

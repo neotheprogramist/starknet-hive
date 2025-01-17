@@ -57,7 +57,7 @@ pub mod test_get_txn_by_block_id_and_index_declare_v2;
 pub mod test_get_txn_by_block_id_and_index_declare_v3;
 pub mod test_get_txn_by_block_id_and_index_deploy_account_v1;
 pub mod test_get_txn_by_block_id_and_index_deploy_account_v3;
-
+pub mod test_syncing;
 #[derive(Clone, Debug)]
 pub struct TestSuiteOpenRpc {
     pub random_paymaster_account: RandomSingleOwnerAccount,

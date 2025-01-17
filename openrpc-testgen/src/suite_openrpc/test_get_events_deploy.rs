@@ -6,13 +6,15 @@ use crate::utils::v7::contract::factory::ContractFactory;
 use crate::utils::v7::endpoints::declare_contract::get_compiled_contract;
 use crate::utils::v7::endpoints::errors::CallError;
 use crate::utils::v7::endpoints::utils::wait_for_sent_transaction;
-use crate::utils::v7::providers::provider::Provider;
+use crate::utils::v7::providers::provider::{Provider, ProviderError};
 use crate::{assert_result, RandomizableAccountsTrait};
 use crate::{utils::v7::endpoints::errors::OpenRpcTestGenError, RunnableTrait};
 use rand::rngs::StdRng;
 use rand::{RngCore, SeedableRng};
 use starknet_types_core::felt::Felt;
-use starknet_types_rpc::{BlockId, EventFilterWithPageRequest, TxnReceipt};
+use starknet_types_rpc::{
+    BlockId, BlockTag, EventFilterWithPageRequest, MaybePendingBlockWithTxs, TxnReceipt,
+};
 
 #[derive(Clone, Debug)]
 pub struct TestCase {}
@@ -91,7 +93,13 @@ impl RunnableTrait for TestCase {
             .random_paymaster_account
             .provider()
             .get_events(filter)
-            .await?;
+            .await;
+
+        let result = events.is_ok();
+
+        assert_result!(result);
+
+        let events = events?;
 
         let deployment_receipt = test_input
             .random_paymaster_account
@@ -269,7 +277,21 @@ impl RunnableTrait for TestCase {
             )
         );
 
-        let sequencer_address = Felt::from_hex("0x123")?;
+        let maybe_pending_block_with_txs = test_input
+            .random_paymaster_account
+            .provider()
+            .get_block_with_txs(BlockId::Tag(BlockTag::Latest))
+            .await?;
+        let sequencer_address = match maybe_pending_block_with_txs {
+            MaybePendingBlockWithTxs::Block(block_with_txs) => {
+                block_with_txs.block_header.sequencer_address
+            }
+            _ => {
+                return Err(OpenRpcTestGenError::ProviderError(
+                    ProviderError::UnexpectedPendingBlock,
+                ))
+            }
+        };
         assert_result!(
             events.events[1].event.keys[2] == sequencer_address,
             format!(
