@@ -50,8 +50,6 @@ impl RunnableTrait for TestCase {
             )
             .await?;
 
-        println!("Initial storage value: {:?}", initial_storage_value);
-
         // Step 3: Update the storage value
         let balance_increase = Felt::from_hex("0x50")?;
         let increase_balance_call = Call {
