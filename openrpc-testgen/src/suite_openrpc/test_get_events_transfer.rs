@@ -171,7 +171,7 @@ impl RunnableTrait for TestCase {
             events.events[1].event.from_address == strk_address,
             format!(
                 "Invalid from address in event, expected {}, got {}",
-                strk_address, events.events[0].event.from_address
+                strk_address, events.events[1].event.from_address
             )
         );
 
