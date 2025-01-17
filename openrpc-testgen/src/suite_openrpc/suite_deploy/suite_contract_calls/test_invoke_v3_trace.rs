@@ -119,6 +119,7 @@ impl RunnableTrait for TestCase {
             )
             .await?[0];
 
+        // index of deployed_contract_address in storage_diffs
         let deployed_contract_index = storage_diff
             .iter()
             .position(|diff| diff.address == deployed_contract_address)
@@ -138,7 +139,7 @@ impl RunnableTrait for TestCase {
                 ))
             })?;
 
-        // function_invocation asserts
+        // function_invocation contract address
         assert_result!(
             function_invocation.calls[0].function_call.contract_address == deployed_contract_address,
             format!(
@@ -147,6 +148,7 @@ impl RunnableTrait for TestCase {
             )
         );
 
+        // function_invocation caller address
         assert_result!(
             function_invocation.calls[0].caller_address == account_address,
             format!(
@@ -154,7 +156,8 @@ impl RunnableTrait for TestCase {
                 account_address, function_invocation.calls[0].caller_address
             )
         );
-
+        
+        // function_invocation entry point selector
         assert_result!(
             function_invocation.calls[0]
                 .function_call
@@ -169,6 +172,7 @@ impl RunnableTrait for TestCase {
             )
         );
 
+        // function_invocation entry point type
         assert_result!(
             function_invocation.calls[0].entry_point_type == entry_point_type_external,
             format!(
@@ -177,7 +181,7 @@ impl RunnableTrait for TestCase {
             )
         );
 
-        // fee_transfer_invocation asserts
+        // fee_transfer_invocation STRK_ERC20_CONTRACT_ADDRESS
         assert_result!(
             fee_transfer_invocation.function_call.contract_address == STRK_ERC20_CONTRACT_ADDRESS,
             format!(
@@ -186,6 +190,7 @@ impl RunnableTrait for TestCase {
             )
         );
 
+        // fee_transfer_invocation entry point selector
         assert_result!(
             fee_transfer_invocation.function_call.entry_point_selector == transfer_selector,
             format!(
@@ -194,7 +199,7 @@ impl RunnableTrait for TestCase {
             )
         );
 
-        // state_diff asserts
+        // state_diff nonces
         assert_result!(
             state_diff_nonce == nonce + Felt::ONE,
             format!(
@@ -213,6 +218,7 @@ impl RunnableTrait for TestCase {
                     "Contract address not found in state diff nonces".to_string(),
                 )
             })?;
+
         assert_result!(
             state_diff_contract_address == account_address,
             format!(
@@ -221,6 +227,7 @@ impl RunnableTrait for TestCase {
             )
         );
 
+        // state diff storage diff deployed contract address
         assert_result!(
             storage_diff[deployed_contract_index].address == deployed_contract_address,
             format!(
@@ -229,6 +236,7 @@ impl RunnableTrait for TestCase {
             )
         );
 
+        // state diff storage balance
         let storage_balance = storage_diff[deployed_contract_index]
             .storage_entries
             .get(0)
@@ -238,6 +246,7 @@ impl RunnableTrait for TestCase {
                     "Value not found in deployed contract storage entries".to_string(),
                 )
             })?;
+
         assert_result!(
             storage_balance == balance,
             format!(
@@ -246,6 +255,7 @@ impl RunnableTrait for TestCase {
             )
         );
 
+        // state diff storage STRK_ERC20_CONTRACT_ADDRESS
         assert_result!(
             storage_diff[strk_erc20_index].address == STRK_ERC20_CONTRACT_ADDRESS,
             format!(
