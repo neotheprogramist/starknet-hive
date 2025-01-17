@@ -156,7 +156,7 @@ impl RunnableTrait for TestCase {
                 account_address, function_invocation.calls[0].caller_address
             )
         );
-        
+
         // function_invocation entry point selector
         assert_result!(
             function_invocation.calls[0]
