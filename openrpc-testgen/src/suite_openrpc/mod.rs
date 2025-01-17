@@ -35,6 +35,7 @@ use crate::{
     SetupableTrait,
 };
 pub mod suite_deploy;
+pub mod test_block_hash_and_number;
 pub mod test_declare_txn_v2;
 pub mod test_declare_txn_v3;
 pub mod test_deploy_account_outside_execution;
