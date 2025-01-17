@@ -137,7 +137,7 @@ impl RunnableTrait for TestCase {
             events.events[0].event.keys[1] == public_key,
             format!(
                 "Invalid account key (new guid) in event, expected {:?}, got {:?}",
-                public_key, events.events[1].event.keys[1]
+                public_key, events.events[0].event.keys[1]
             )
         );
 
@@ -175,7 +175,7 @@ impl RunnableTrait for TestCase {
             events.events[1].event.from_address == strk_address,
             format!(
                 "Invalid from address in event, expected {}, got {}",
-                strk_address, events.events[0].event.from_address
+                strk_address, events.events[1].event.from_address
             )
         );
 
@@ -201,7 +201,7 @@ impl RunnableTrait for TestCase {
             events.events[1].event.keys[0] == keccak_transfer,
             format!(
                 "Invalid keccak transfer in event keys, expected {}, got {}",
-                keccak_transfer, events.events[0].event.keys[0]
+                keccak_transfer, events.events[1].event.keys[0]
             )
         );
 
