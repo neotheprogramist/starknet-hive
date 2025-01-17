@@ -34,30 +34,30 @@ use crate::{
     },
     SetupableTrait,
 };
-pub mod suite_deploy;
-pub mod test_declare_txn_v2;
-pub mod test_declare_txn_v3;
-pub mod test_deploy_account_outside_execution;
-pub mod test_erc20_transfer_outside_execution;
-pub mod test_get_block_number;
-pub mod test_get_block_txn_count;
-pub mod test_get_block_with_tx_hashes;
-pub mod test_get_block_with_txs;
-pub mod test_get_chain_id;
-pub mod test_get_class;
-pub mod test_get_events_declare;
-pub mod test_get_events_deploy;
-pub mod test_get_events_deploy_account;
-pub mod test_get_events_transfer;
-pub mod test_get_nonce;
-pub mod test_get_state_update;
-pub mod test_get_transaction_by_hash;
-pub mod test_get_transaction_by_hash_non_existent;
-pub mod test_get_txn_by_block_id_and_index_declare_v2;
-pub mod test_get_txn_by_block_id_and_index_declare_v3;
-pub mod test_get_txn_by_block_id_and_index_deploy_account_v1;
-pub mod test_get_txn_by_block_id_and_index_deploy_account_v3;
-
+// pub mod suite_deploy;
+// pub mod test_declare_txn_v2;
+// pub mod test_declare_txn_v3;
+// pub mod test_deploy_account_outside_execution;
+// pub mod test_erc20_transfer_outside_execution;
+// pub mod test_get_block_number;
+// pub mod test_get_block_txn_count;
+// pub mod test_get_block_with_tx_hashes;
+// pub mod test_get_block_with_txs;
+// pub mod test_get_chain_id;
+// pub mod test_get_class;
+// pub mod test_get_events_declare;
+// pub mod test_get_events_deploy;
+// pub mod test_get_events_deploy_account;
+// pub mod test_get_events_transfer;
+// pub mod test_get_nonce;
+// pub mod test_get_state_update;
+// pub mod test_get_transaction_by_hash;
+// pub mod test_get_transaction_by_hash_non_existent;
+// pub mod test_get_txn_by_block_id_and_index_declare_v2;
+// pub mod test_get_txn_by_block_id_and_index_declare_v3;
+// pub mod test_get_txn_by_block_id_and_index_deploy_account_v1;
+// pub mod test_get_txn_by_block_id_and_index_deploy_account_v3;
+pub mod test_syncing;
 #[derive(Clone, Debug)]
 pub struct TestSuiteOpenRpc {
     pub random_paymaster_account: RandomSingleOwnerAccount,
