@@ -136,7 +136,7 @@ impl RunnableTrait for TestCase {
             events.events[0].event.keys[2] == receiptent_address,
             format!(
                 "Invalid receiptent address in event keys, expected {}, got {}",
-                receiptent_address, events.events[0].event.keys[1]
+                receiptent_address, events.events[0].event.keys[2]
             )
         );
 
@@ -196,7 +196,7 @@ impl RunnableTrait for TestCase {
             events.events[1].event.keys[0] == keccak_transfer,
             format!(
                 "Invalid keccak transfer in event keys, expected {}, got {}",
-                keccak_transfer, events.events[0].event.keys[0]
+                keccak_transfer, events.events[1].event.keys[0]
             )
         );
 
