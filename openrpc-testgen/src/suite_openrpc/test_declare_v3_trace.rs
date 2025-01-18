@@ -85,7 +85,7 @@ impl RunnableTrait for TestCase {
 
         let state_diff_nonce = state_diff
             .nonces
-            .get(0)
+            .first()
             .and_then(|nonce| nonce.nonce)
             .ok_or_else(|| {
                 OpenRpcTestGenError::Other("Nonce not found in state diff".to_string())
@@ -146,7 +146,7 @@ impl RunnableTrait for TestCase {
 
         let state_diff_contract_address = state_diff
             .nonces
-            .get(0)
+            .first()
             .and_then(|nonce| nonce.contract_address)
             .ok_or_else(|| {
                 OpenRpcTestGenError::Other(
@@ -166,7 +166,7 @@ impl RunnableTrait for TestCase {
         // Retrieve the class_hash from the state diff declared classes
         let state_diff_class_hash = state_diff
             .declared_classes
-            .get(0)
+            .first()
             .and_then(|declared_class| declared_class.class_hash)
             .ok_or_else(|| {
                 OpenRpcTestGenError::Other(
@@ -186,7 +186,7 @@ impl RunnableTrait for TestCase {
         // Retrieve the compiled_class_hash from the state diff declared classes
         let state_diff_compiled_class_hash = state_diff
             .declared_classes
-            .get(0)
+            .first()
             .and_then(|declared_class| declared_class.compiled_class_hash)
             .ok_or_else(|| {
                 OpenRpcTestGenError::Other(

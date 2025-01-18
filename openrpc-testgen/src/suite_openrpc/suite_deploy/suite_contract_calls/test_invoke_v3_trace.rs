@@ -100,7 +100,7 @@ impl RunnableTrait for TestCase {
         })?;
         let state_diff_nonce = state_diff
             .nonces
-            .get(0)
+            .first()
             .and_then(|nonce| nonce.nonce)
             .ok_or_else(|| {
                 OpenRpcTestGenError::Other("Nonce not found in state diff".to_string())
@@ -134,13 +134,13 @@ impl RunnableTrait for TestCase {
             .iter()
             .position(|diff| diff.address == STRK_ERC20_CONTRACT_ADDRESS)
             .ok_or_else(|| {
-                OpenRpcTestGenError::Other(format!(
-                    "STRK_ERC20_CONTRACT_ADDRESS not found in storage diffs"
-                ))
+                OpenRpcTestGenError::Other(
+                    "STRK_ERC20_CONTRACT_ADDRESS not found in storage diffs".to_string(),
+                )
             })?;
 
         // Retrieve the first call from function_invocation
-        let function_invocation_call = function_invocation.calls.get(0).ok_or_else(|| {
+        let function_invocation_call = function_invocation.calls.first().ok_or_else(|| {
             OpenRpcTestGenError::Other("No calls found in function invocation".to_string())
         })?;
 
@@ -212,7 +212,7 @@ impl RunnableTrait for TestCase {
 
         let state_diff_contract_address = state_diff
             .nonces
-            .get(0)
+            .first()
             .and_then(|nonce| nonce.contract_address)
             .ok_or_else(|| {
                 OpenRpcTestGenError::Other(
@@ -249,7 +249,7 @@ impl RunnableTrait for TestCase {
         // state diff storage balance
         let storage_balance = deployed_contract_storage_diff
             .storage_entries
-            .get(0)
+            .first()
             .and_then(|entry| entry.value)
             .ok_or_else(|| {
                 OpenRpcTestGenError::Other(

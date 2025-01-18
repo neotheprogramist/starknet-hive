@@ -143,7 +143,7 @@ impl RunnableTrait for TestCase {
         // Retrieve the contract address from the state diff nonces
         let state_diff_nonce_contract_address = state_diff
             .nonces
-            .get(0)
+            .first()
             .and_then(|nonce| nonce.contract_address)
             .ok_or_else(|| {
                 OpenRpcTestGenError::Other(
@@ -154,7 +154,7 @@ impl RunnableTrait for TestCase {
         // Retrieve the nonce from the state diff nonces
         let state_diff_nonce = state_diff
             .nonces
-            .get(0)
+            .first()
             .and_then(|nonce| nonce.nonce)
             .ok_or_else(|| {
                 OpenRpcTestGenError::Other("Nonce is missing in state diff".to_string())
@@ -218,7 +218,7 @@ impl RunnableTrait for TestCase {
         let public_key_in_calldata = constructor_invocation
             .function_call
             .calldata
-            .get(0)
+            .first()
             .ok_or_else(|| {
                 OpenRpcTestGenError::Other(
                     "Public key is missing in constructor invocation calldata".to_string(),
@@ -306,7 +306,7 @@ impl RunnableTrait for TestCase {
             )
         );
 
-        let deployed_contract = state_diff.deployed_contracts.get(0).ok_or_else(|| {
+        let deployed_contract = state_diff.deployed_contracts.first().ok_or_else(|| {
             OpenRpcTestGenError::Other("No deployed contracts found in state diff".to_string())
         })?;
 
