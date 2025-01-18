@@ -74,7 +74,7 @@ impl RunnableTrait for TestCase {
 
         let events = events?;
 
-        let first_event = events.events.get(0).ok_or_else(|| {
+        let first_event = events.events.first().ok_or_else(|| {
             OpenRpcTestGenError::Other("First event (declaration) not found".to_string())
         })?;
 
@@ -107,11 +107,11 @@ impl RunnableTrait for TestCase {
         // Check data
         let data = &first_event.event.data;
         assert_result!(
-            data.get(0) == Some(&estimate_fee.overall_fee),
+            data.first() == Some(&estimate_fee.overall_fee),
             format!(
                 "Invalid fee (transfer) amount in event data, expected {}, got {:?}",
                 estimate_fee.overall_fee,
-                data.get(0)
+                data.first()
             )
         );
 
@@ -128,11 +128,11 @@ impl RunnableTrait for TestCase {
         let transfer_keccak = starknet_keccak("Transfer".as_bytes());
         let keys = &first_event.event.keys;
         assert_result!(
-            keys.get(0) == Some(&transfer_keccak),
+            keys.first() == Some(&transfer_keccak),
             format!(
                 "Invalid keccak transfer in event keys, expected {}, got {:?}",
                 transfer_keccak,
-                keys.get(0)
+                keys.first()
             )
         );
 

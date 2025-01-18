@@ -59,7 +59,7 @@ impl RunnableTrait for TestCase {
         let block_with_tx_hashes = block_with_tx_hashes?;
         let tx_hash = match block_with_tx_hashes {
             starknet_types_rpc::MaybePendingBlockWithTxHashes::Block(block) => {
-                *block.transactions.get(0).ok_or_else(|| {
+                *block.transactions.first().ok_or_else(|| {
                     OpenRpcTestGenError::Other(
                         "Expected block to have at least one transaction".to_string(),
                     )

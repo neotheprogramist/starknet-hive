@@ -96,7 +96,7 @@ impl RunnableTrait for TestCase {
 
         let first_event = events
             .events
-            .get(0)
+            .first()
             .ok_or_else(|| OpenRpcTestGenError::Other("Failed to get first event".to_string()))?;
 
         assert_result!(
@@ -108,11 +108,11 @@ impl RunnableTrait for TestCase {
         );
 
         assert_result!(
-            first_event.event.data.get(0) == Some(&transfer_amount),
+            first_event.event.data.first() == Some(&transfer_amount),
             format!(
                 "Invalid transfer amount in event data, expected {}, got {:?}",
                 transfer_amount,
-                first_event.event.data.get(0)
+                first_event.event.data.first()
             )
         );
 
@@ -127,11 +127,11 @@ impl RunnableTrait for TestCase {
 
         let keccak_transfer = starknet_keccak("Transfer".as_bytes());
         assert_result!(
-            first_event.event.keys.get(0) == Some(&keccak_transfer),
+            first_event.event.keys.first() == Some(&keccak_transfer),
             format!(
                 "Invalid keccak transfer in event keys, expected {}, got {:?}",
                 keccak_transfer,
-                first_event.event.keys.get(0)
+                first_event.event.keys.first()
             )
         );
 
@@ -195,11 +195,11 @@ impl RunnableTrait for TestCase {
         );
 
         assert_result!(
-            second_event.event.data.get(0) == Some(&estimate_fee.overall_fee),
+            second_event.event.data.first() == Some(&estimate_fee.overall_fee),
             format!(
                 "Invalid fee amount in event data, expected {}, got {:?}",
                 estimate_fee.overall_fee,
-                second_event.event.data.get(0)
+                second_event.event.data.first()
             )
         );
 
@@ -213,11 +213,11 @@ impl RunnableTrait for TestCase {
         );
 
         assert_result!(
-            second_event.event.keys.get(0) == Some(&keccak_transfer),
+            second_event.event.keys.first() == Some(&keccak_transfer),
             format!(
                 "Invalid keccak transfer in event keys, expected {}, got {:?}",
                 keccak_transfer,
-                second_event.event.keys.get(0)
+                second_event.event.keys.first()
             )
         );
 

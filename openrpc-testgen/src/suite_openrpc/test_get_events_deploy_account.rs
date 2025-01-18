@@ -105,7 +105,7 @@ impl RunnableTrait for TestCase {
 
         let first_event = events
             .events
-            .get(0)
+            .first()
             .ok_or_else(|| OpenRpcTestGenError::Other("First event not found".to_string()))?;
 
         assert_result!(
@@ -144,11 +144,11 @@ impl RunnableTrait for TestCase {
 
         let keccak_owner_added = starknet_keccak("OwnerAdded".as_bytes());
         assert_result!(
-            first_event.event.keys.get(0) == Some(&keccak_owner_added),
+            first_event.event.keys.first() == Some(&keccak_owner_added),
             format!(
                 "Invalid event key, expected {:?}, got {:?}",
                 keccak_owner_added,
-                first_event.event.keys.get(0)
+                first_event.event.keys.first()
             )
         );
 
@@ -206,11 +206,11 @@ impl RunnableTrait for TestCase {
         );
 
         assert_result!(
-            second_event.event.data.get(0) == Some(&account_data.max_fee),
+            second_event.event.data.first() == Some(&account_data.max_fee),
             format!(
                 "Invalid fee amount in event data, expected {}, got {:?}",
                 account_data.max_fee,
-                second_event.event.data.get(0)
+                second_event.event.data.first()
             )
         );
 
@@ -225,11 +225,11 @@ impl RunnableTrait for TestCase {
 
         let keccak_transfer = starknet_keccak("Transfer".as_bytes());
         assert_result!(
-            second_event.event.keys.get(0) == Some(&keccak_transfer),
+            second_event.event.keys.first() == Some(&keccak_transfer),
             format!(
                 "Invalid keccak transfer in event keys, expected {}, got {:?}",
                 keccak_transfer,
-                second_event.event.keys.get(0)
+                second_event.event.keys.first()
             )
         );
 

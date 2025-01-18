@@ -149,7 +149,7 @@ impl RunnableTrait for TestCase {
 
         let first_event = events
             .events
-            .get(0)
+            .first()
             .ok_or_else(|| OpenRpcTestGenError::Other("Failed to get first event".to_string()))?;
 
         let udc_address = test_input.udc_address;
@@ -162,11 +162,11 @@ impl RunnableTrait for TestCase {
         );
 
         assert_result!(
-            first_event.event.data.get(0) == Some(&deployed_contract_address),
+            first_event.event.data.first() == Some(&deployed_contract_address),
             format!(
                 "Invalid deployed contract address in event, expected {:?}, got {:?}",
                 deployed_contract_address,
-                first_event.event.data.get(0)
+                first_event.event.data.first()
             )
         );
 
@@ -219,11 +219,11 @@ impl RunnableTrait for TestCase {
 
         let keccak_contract_deployed = starknet_keccak("ContractDeployed".as_bytes());
         assert_result!(
-            first_event.event.keys.get(0) == Some(&keccak_contract_deployed),
+            first_event.event.keys.first() == Some(&keccak_contract_deployed),
             format!(
                 "Invalid keccak transfer in event keys, expected {:?}, got {:?}",
                 keccak_contract_deployed,
-                first_event.event.keys.get(0)
+                first_event.event.keys.first()
             )
         );
 
@@ -268,11 +268,11 @@ impl RunnableTrait for TestCase {
         );
 
         assert_result!(
-            second_event.event.data.get(0) == Some(&estimate_fee.overall_fee),
+            second_event.event.data.first() == Some(&estimate_fee.overall_fee),
             format!(
                 "Invalid fee amount in event data, expected {}, got {:?}",
                 estimate_fee.overall_fee,
-                second_event.event.data.get(0)
+                second_event.event.data.first()
             )
         );
 
@@ -287,11 +287,11 @@ impl RunnableTrait for TestCase {
 
         let keccak_transfer = starknet_keccak("Transfer".as_bytes());
         assert_result!(
-            second_event.event.keys.get(0) == Some(&keccak_transfer),
+            second_event.event.keys.first() == Some(&keccak_transfer),
             format!(
                 "Invalid keccak transfer in event keys, expected {}, got {:?}",
                 keccak_transfer,
-                second_event.event.keys.get(0)
+                second_event.event.keys.first()
             )
         );
 
