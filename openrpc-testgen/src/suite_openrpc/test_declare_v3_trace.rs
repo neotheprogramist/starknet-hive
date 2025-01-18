@@ -153,7 +153,8 @@ impl RunnableTrait for TestCase {
                     "Contract address not found in state diff nonces".to_string(),
                 )
             })?;
-
+        
+        // Validate that the contract address in the state diff matches the expected account address
         assert_result!(
             state_diff_contract_address == account_address,
             format!(
@@ -162,13 +163,18 @@ impl RunnableTrait for TestCase {
             )
         );
 
-        // state_diff class_hash
-        let state_diff_class_hash = state_diff.declared_classes[0].class_hash.ok_or_else(|| {
-            OpenRpcTestGenError::Other(
-                "class_hash not found in state diff declared classes".to_string(),
-            )
-        })?;
+        // Retrieve the class_hash from the state diff declared classes
+        let state_diff_class_hash = state_diff
+            .declared_classes
+            .get(0)
+            .and_then(|declared_class| declared_class.class_hash)
+            .ok_or_else(|| {
+                OpenRpcTestGenError::Other(
+                    "class_hash not found in state diff declared classes".to_string(),
+                )
+            })?;
 
+        // Validate that the class_hash in the state diff matches the class_hash from the declare result
         assert_result!(
             state_diff_class_hash == declare_result.class_hash,
             format!(
@@ -177,15 +183,18 @@ impl RunnableTrait for TestCase {
             )
         );
 
-        // state_diff compiled_class_hash
-        let state_diff_compiled_class_hash = state_diff.declared_classes[0]
-            .compiled_class_hash
+        // Retrieve the compiled_class_hash from the state diff declared classes
+        let state_diff_compiled_class_hash = state_diff
+            .declared_classes
+            .get(0)
+            .and_then(|declared_class| declared_class.compiled_class_hash)
             .ok_or_else(|| {
                 OpenRpcTestGenError::Other(
                     "compiled_class_hash not found in state diff declared classes".to_string(),
                 )
             })?;
 
+        // Validate that the compiled_class_hash matches the expected compiled_class_hash
         assert_result!(
             state_diff_compiled_class_hash == compiled_class_hash,
             format!(

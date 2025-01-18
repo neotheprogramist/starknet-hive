@@ -139,45 +139,46 @@ impl RunnableTrait for TestCase {
                 ))
             })?;
 
-        // function_invocation contract address
+        // Retrieve the first call from function_invocation
+        let function_invocation_call = function_invocation
+            .calls
+            .get(0)
+            .ok_or_else(|| OpenRpcTestGenError::Other("No calls found in function invocation".to_string()))?;
+
+
+        // Validate the contract address 
         assert_result!(
-            function_invocation.calls[0].function_call.contract_address == deployed_contract_address,
+            function_invocation_call.function_call.contract_address == deployed_contract_address,
             format!(
                 "Contract address mismatch in nested call: expected call to {:?}, but found call to {:?}",
-                deployed_contract_address, function_invocation.calls[0].function_call.contract_address
+                deployed_contract_address, function_invocation_call.function_call.contract_address
             )
         );
 
-        // function_invocation caller address
+        // Validate the caller address
         assert_result!(
-            function_invocation.calls[0].caller_address == account_address,
+            function_invocation_call.caller_address == account_address,
             format!(
                 "Caller address mismatch in nested call: expected {:?}, but found {:?}",
-                account_address, function_invocation.calls[0].caller_address
+                account_address, function_invocation_call.caller_address
             )
         );
 
-        // function_invocation entry point selector
+        // Validate the entry point selector 
         assert_result!(
-            function_invocation.calls[0]
-                .function_call
-                .entry_point_selector
-                == increase_balance_selector,
+            function_invocation_call.function_call.entry_point_selector == increase_balance_selector,
             format!(
                 "Entry point selector mismatch in nested call: expected {:?}, but found {:?}",
-                increase_balance_selector,
-                function_invocation.calls[0]
-                    .function_call
-                    .entry_point_selector
+                increase_balance_selector, function_invocation_call.function_call.entry_point_selector
             )
         );
 
-        // function_invocation entry point type
+        // Validate the entry point type 
         assert_result!(
-            function_invocation.calls[0].entry_point_type == entry_point_type_external,
+            function_invocation_call.entry_point_type == entry_point_type_external,
             format!(
                 "Entry point type mismatch in nested call: expected {:?}, but found {:?}",
-                entry_point_type_external, function_invocation.calls[0].entry_point_type
+                entry_point_type_external, function_invocation_call.entry_point_type
             )
         );
 
@@ -227,17 +228,25 @@ impl RunnableTrait for TestCase {
             )
         );
 
-        // state diff storage diff deployed contract address
+        // Retrieve the storage diff for the deployed contract 
+        let deployed_contract_storage_diff = storage_diff.get(deployed_contract_index).ok_or_else(|| {
+            OpenRpcTestGenError::Other(format!(
+                "No storage diff entry found for deployed contract at index {}",
+                deployed_contract_index
+            ))
+        })?;
+
+        // Validate the deployed contract address in the storage diff
         assert_result!(
-            storage_diff[deployed_contract_index].address == deployed_contract_address,
+            deployed_contract_storage_diff.address == deployed_contract_address,
             format!(
                 "Contract address mismatch in storage diff: expected {:?}, but found {:?}",
-                deployed_contract_address, storage_diff[deployed_contract_index].address
+                deployed_contract_address, deployed_contract_storage_diff.address
             )
         );
 
         // state diff storage balance
-        let storage_balance = storage_diff[deployed_contract_index]
+        let storage_balance = deployed_contract_storage_diff
             .storage_entries
             .get(0)
             .and_then(|entry| entry.value)
@@ -255,12 +264,20 @@ impl RunnableTrait for TestCase {
             )
         );
 
-        // state diff storage STRK_ERC20_CONTRACT_ADDRESS
+        // Retrieve the storage diff for STRK_ERC20_CONTRACT_ADDRESS 
+        let strk_erc20_storage_diff = storage_diff.get(strk_erc20_index).ok_or_else(|| {
+            OpenRpcTestGenError::Other(format!(
+                "No storage diff entry found for STRK_ERC20_CONTRACT_ADDRESS at index {}",
+                strk_erc20_index
+            ))
+        })?;
+
+        // Validate the STRK_ERC20_CONTRACT_ADDRESS in the storage diff
         assert_result!(
-            storage_diff[strk_erc20_index].address == STRK_ERC20_CONTRACT_ADDRESS,
+            strk_erc20_storage_diff.address == STRK_ERC20_CONTRACT_ADDRESS,
             format!(
-                "STRK_ERC20_CONTRACT_ADDRESS address mismatch in storage diff: expected {:?}, but found {:?}",
-                STRK_ERC20_CONTRACT_ADDRESS, storage_diff[strk_erc20_index].address
+                "STRK_ERC20_CONTRACT_ADDRESS mismatch in storage diff: expected {:?}, but found {:?}",
+                STRK_ERC20_CONTRACT_ADDRESS, strk_erc20_storage_diff.address
             )
         );
 
