@@ -62,17 +62,21 @@ impl RunnableTrait for TestCase {
             }
         };
 
-        let class_hash = state_update.state_diff.declared_classes[0]
-            .class_hash
-            .ok_or(OpenRpcTestGenError::ProviderError(
-            crate::utils::v7::providers::provider::ProviderError::ClassHashNotFoundInStateUpdate,
-        ))?;
+        let class_hash = state_update
+            .state_diff
+            .declared_classes
+            .first()
+            .ok_or(OpenRpcTestGenError::Other(
+                "No declared class in state update".to_string(),
+            ))?
+            .class_hash;
 
         assert_result!(
-            class_hash == declaration_result.class_hash,
+            class_hash == Some(declaration_result.class_hash),
             format!(
-                "Mismatch in class hash. Expected: {}, Found: {:?}.",
-                declaration_result.class_hash, class_hash
+                "Mismatch in class hash. Expected: {:?}, Found: {:?}.",
+                Some(declaration_result.class_hash),
+                class_hash
             )
         );
 

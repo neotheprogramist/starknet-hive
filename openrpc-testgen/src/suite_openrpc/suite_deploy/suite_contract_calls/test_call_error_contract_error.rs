@@ -1,7 +1,8 @@
 use crate::utils::v7::accounts::account::{Account, ConnectedAccount};
 use crate::utils::v7::endpoints::utils::wait_for_sent_transaction;
-use crate::utils::v7::providers::provider::Provider;
-use crate::{assert_result, RandomizableAccountsTrait};
+use crate::utils::v7::providers::jsonrpc::StarknetError;
+use crate::utils::v7::providers::provider::{Provider, ProviderError};
+use crate::{assert_matches_result, RandomizableAccountsTrait};
 use crate::{
     utils::v7::{
         accounts::call::Call,
@@ -19,28 +20,10 @@ impl RunnableTrait for TestCase {
     type Input = super::TestSuiteContractCalls;
 
     async fn run(test_input: &Self::Input) -> Result<Self, OpenRpcTestGenError> {
-        let initial_balance = *test_input
-            .random_paymaster_account
-            .provider()
-            .call(
-                FunctionCall {
-                    calldata: vec![],
-                    contract_address: test_input.deployed_contract_address,
-                    entry_point_selector: get_selector_from_name("get_balance")?,
-                },
-                BlockId::Tag(BlockTag::Pending),
-            )
-            .await?
-            .first()
-            .ok_or(OpenRpcTestGenError::Other(
-                "Empty initial contract balance".to_string(),
-            ))?;
-
-        let amount_to_increase = Felt::from_hex_unchecked("0x50");
         let increase_balance_call = Call {
             to: test_input.deployed_contract_address,
             selector: get_selector_from_name("increase_balance")?,
-            calldata: vec![amount_to_increase],
+            calldata: vec![Felt::from_hex("0x50")?],
         };
 
         let invoke_result = test_input
@@ -55,34 +38,23 @@ impl RunnableTrait for TestCase {
         )
         .await?;
 
-        let updated_balance = test_input
+        // Call with invalid selector should return ContractError
+        let balance = test_input
             .random_paymaster_account
             .provider()
             .call(
                 FunctionCall {
                     calldata: vec![],
                     contract_address: test_input.deployed_contract_address,
-                    entry_point_selector: get_selector_from_name("get_balance")?,
+                    entry_point_selector: get_selector_from_name("get_bal")?,
                 },
                 BlockId::Tag(BlockTag::Pending),
             )
             .await;
 
-        let result = updated_balance.is_ok();
-
-        assert_result!(result);
-
-        let updated_balance = *updated_balance?.first().ok_or(OpenRpcTestGenError::Other(
-            "Empty updated contract balance".to_string(),
-        ))?;
-
-        assert_result!(
-            updated_balance == initial_balance + amount_to_increase,
-            format!(
-                "Unexpected balance. Expected: {:?}, Found: {:?}",
-                initial_balance + amount_to_increase,
-                updated_balance
-            )
+        assert_matches_result!(
+            balance.unwrap_err(),
+            ProviderError::StarknetError(StarknetError::ContractError(_))
         );
 
         Ok(Self {})

@@ -38,14 +38,15 @@ impl RunnableTrait for TestCase {
         )
         .await?;
 
+        // Call with invalid contract address should return ContractNotFound
         let balance = test_input
             .random_paymaster_account
             .provider()
             .call(
                 FunctionCall {
                     calldata: vec![],
-                    contract_address: test_input.deployed_contract_address,
-                    entry_point_selector: get_selector_from_name("get_bal")?,
+                    contract_address: Felt::ONE,
+                    entry_point_selector: get_selector_from_name("get_balance")?,
                 },
                 BlockId::Tag(BlockTag::Pending),
             )
@@ -53,7 +54,7 @@ impl RunnableTrait for TestCase {
 
         assert_matches_result!(
             balance.unwrap_err(),
-            ProviderError::StarknetError(StarknetError::ContractError(_))
+            ProviderError::StarknetError(StarknetError::ContractNotFound)
         );
 
         Ok(Self {})

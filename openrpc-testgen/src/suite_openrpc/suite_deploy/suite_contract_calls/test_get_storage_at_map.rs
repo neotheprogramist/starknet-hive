@@ -25,7 +25,7 @@ impl RunnableTrait for TestCase {
     async fn run(test_input: &Self::Input) -> Result<Self, OpenRpcTestGenError> {
         // Step 1: Get initial balance for a user
         let paymaster_address = test_input.random_paymaster_account.address();
-        let initial_user_balance = test_input
+        let initial_user_balance = *test_input
             .random_paymaster_account
             .provider()
             .call(
@@ -36,7 +36,11 @@ impl RunnableTrait for TestCase {
                 },
                 BlockId::Tag(BlockTag::Latest),
             )
-            .await?[0];
+            .await?
+            .first()
+            .ok_or(OpenRpcTestGenError::Other(
+                "Empty initial user balance".to_string(),
+            ))?;
 
         let user_balance_slot = get_storage_var_address("balances", &[paymaster_address])?;
         let initial_storage_value = test_input
@@ -70,7 +74,7 @@ impl RunnableTrait for TestCase {
         .await?;
 
         // Step 3: Verify updated balance
-        let updated_user_balance = test_input
+        let updated_user_balance = *test_input
             .random_paymaster_account
             .provider()
             .call(
@@ -81,7 +85,11 @@ impl RunnableTrait for TestCase {
                 },
                 BlockId::Tag(BlockTag::Latest),
             )
-            .await?[0];
+            .await?
+            .first()
+            .ok_or(OpenRpcTestGenError::Other(
+                "Empty updated user balance".to_string(),
+            ))?;
 
         assert_result!(
             updated_user_balance == initial_user_balance + deposit_amount,
