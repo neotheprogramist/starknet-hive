@@ -19,7 +19,7 @@ impl RunnableTrait for TestCase {
     type Input = super::TestSuiteContractCalls;
 
     async fn run(test_input: &Self::Input) -> Result<Self, OpenRpcTestGenError> {
-        let initial_balance = test_input
+        let initial_balance = *test_input
             .random_paymaster_account
             .provider()
             .call(
@@ -30,7 +30,11 @@ impl RunnableTrait for TestCase {
                 },
                 BlockId::Tag(BlockTag::Pending),
             )
-            .await?[0];
+            .await?
+            .first()
+            .ok_or(OpenRpcTestGenError::Other(
+                "Empty initial contract balance".to_string(),
+            ))?;
 
         let amount_to_increase = Felt::from_hex_unchecked("0x50");
         let increase_balance_call = Call {
@@ -68,7 +72,10 @@ impl RunnableTrait for TestCase {
 
         assert_result!(result);
 
-        let updated_balance = updated_balance?[0];
+        let updated_balance = *updated_balance?.first().ok_or(OpenRpcTestGenError::Other(
+            "Empty updated contract balance".to_string(),
+        ))?;
+
         assert_result!(
             updated_balance == initial_balance + amount_to_increase,
             format!(

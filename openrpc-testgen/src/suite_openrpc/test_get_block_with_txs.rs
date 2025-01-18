@@ -63,12 +63,16 @@ impl RunnableTrait for TestCase {
             }
         };
 
+        let first_transaction = block_with_txs
+            .transactions
+            .first()
+            .ok_or_else(|| OpenRpcTestGenError::Other("no transactions in block".to_string()))?;
+
         assert_result!(
-            block_with_txs.transactions[0].transaction_hash == declaration_result.transaction_hash,
+            first_transaction.transaction_hash == declaration_result.transaction_hash,
             format!(
                 "Mismatch in transaction hash. Expected: {}, Found: {}.",
-                declaration_result.transaction_hash,
-                block_with_txs.transactions[0].transaction_hash
+                declaration_result.transaction_hash, first_transaction.transaction_hash
             )
         );
 

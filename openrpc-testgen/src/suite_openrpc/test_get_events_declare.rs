@@ -74,6 +74,18 @@ impl RunnableTrait for TestCase {
 
         let events = events?;
 
+        let first_event = events.events.first().ok_or_else(|| {
+            OpenRpcTestGenError::Other("First event (declaration) not found".to_string())
+        })?;
+
+        assert_result!(
+            events.continuation_token.is_none(),
+            format!(
+                "No continuation token expected. Expected None, got {:?}",
+                events.continuation_token
+            )
+        );
+
         assert_result!(
             events.events.len() == 1,
             format!(
@@ -83,46 +95,54 @@ impl RunnableTrait for TestCase {
             )
         );
 
+        // Check from address
         assert_result!(
-            events.events[0].event.from_address == strk_address,
+            first_event.event.from_address == strk_address,
             format!(
                 "Invalid from address in event, expected {}, got {}",
-                strk_address, events.events[0].event.from_address
+                strk_address, first_event.event.from_address
+            )
+        );
+
+        // Check data
+        let data = &first_event.event.data;
+        assert_result!(
+            data.first() == Some(&estimate_fee.overall_fee),
+            format!(
+                "Invalid fee (transfer) amount in event data, expected {}, got {:?}",
+                estimate_fee.overall_fee,
+                data.first()
             )
         );
 
         assert_result!(
-            events.events[0].event.data[0] == estimate_fee.overall_fee,
+            data.get(1) == Some(&Felt::ZERO),
             format!(
-                "Invalid fee (transfer) amount in event data, expected {}, got {}",
-                estimate_fee.overall_fee, events.events[0].event.data[0]
-            )
-        );
-
-        assert_result!(
-            events.events[0].event.data[1] == Felt::ZERO,
-            format!(
-                "Invalid fee (transfer) amount in event data, expected {}, got {}",
+                "Invalid fee (transfer) amount in event data, expected {}, got {:?}",
                 Felt::ZERO,
-                events.events[0].event.data[1]
+                data.get(1)
             )
         );
 
-        let keccak_transfer = starknet_keccak("Transfer".as_bytes());
+        // Check keys
+        let transfer_keccak = starknet_keccak("Transfer".as_bytes());
+        let keys = &first_event.event.keys;
         assert_result!(
-            events.events[0].event.keys[0] == keccak_transfer,
+            keys.first() == Some(&transfer_keccak),
             format!(
-                "Invalid keccak transfer in event keys, expected {}, got {}",
-                keccak_transfer, events.events[0].event.keys[0]
+                "Invalid keccak transfer in event keys, expected {}, got {:?}",
+                transfer_keccak,
+                keys.first()
             )
         );
 
         let sender_address = sender.address();
         assert_result!(
-            events.events[0].event.keys[1] == sender_address,
+            keys.get(1) == Some(&sender_address),
             format!(
-                "Invalid sender address in event keys, expected {}, got {}",
-                sender_address, events.events[0].event.keys[1]
+                "Invalid sender address in event keys, expected {}, got {:?}",
+                sender_address,
+                keys.get(1)
             )
         );
 
@@ -143,36 +163,39 @@ impl RunnableTrait for TestCase {
         };
 
         assert_result!(
-            events.events[0].event.keys[2] == sequencer_address,
+            keys.get(2) == Some(&sequencer_address),
             format!(
-                "Invalid sequencer address in event keys, expected {}, got {}",
-                sequencer_address, events.events[0].event.keys[2]
+                "Invalid sequencer address in event keys, expected {}, got {:?}",
+                sequencer_address,
+                keys.get(2)
             )
         );
 
+        // Check block hash and number
         assert_result!(
-            events.events[0].block_hash == Some(block_hash_and_number.block_hash),
+            first_event.block_hash == Some(block_hash_and_number.block_hash),
             format!(
                 "Invalid block hash in event, expected {:?}, got {:?}",
                 Some(block_hash_and_number.block_hash),
-                events.events[0].block_hash
+                first_event.block_hash
             )
         );
 
         assert_result!(
-            events.events[0].block_number == Some(block_hash_and_number.block_number),
+            first_event.block_number == Some(block_hash_and_number.block_number),
             format!(
                 "Invalid block number in event, expected {:?}, got {:?}",
                 Some(block_hash_and_number.block_number),
-                events.events[0].block_number
+                first_event.block_number
             )
         );
 
+        // Check transaction hash
         assert_result!(
-            events.events[0].transaction_hash == declaration_result.transaction_hash,
+            first_event.transaction_hash == declaration_result.transaction_hash,
             format!(
                 "Invalid transaction hash in event, expected {:?}, got {:?}",
-                declaration_result.transaction_hash, events.events[0].transaction_hash
+                declaration_result.transaction_hash, first_event.transaction_hash
             )
         );
 
