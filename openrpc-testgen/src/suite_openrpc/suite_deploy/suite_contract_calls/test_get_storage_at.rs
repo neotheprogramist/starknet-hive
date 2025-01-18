@@ -24,7 +24,7 @@ impl RunnableTrait for TestCase {
 
     async fn run(test_input: &Self::Input) -> Result<Self, OpenRpcTestGenError> {
         // Step 1: Call the deployed contract
-        let initial_balance = test_input
+        let initial_balance = *test_input
             .random_paymaster_account
             .provider()
             .call(
@@ -35,7 +35,11 @@ impl RunnableTrait for TestCase {
                 },
                 BlockId::Tag(BlockTag::Latest),
             )
-            .await?[0];
+            .await?
+            .first()
+            .ok_or(OpenRpcTestGenError::Other(
+                "Empty initial contract balance".to_string(),
+            ))?;
 
         // Step 2: Get the storage value and get the storage value
         let contract_balance_slot = get_storage_var_address("balance", &[])?;
@@ -71,7 +75,7 @@ impl RunnableTrait for TestCase {
         .await?;
 
         // Step 4: Get the updated balance via call and get the updated storage value
-        let updated_balance = test_input
+        let updated_balance = *test_input
             .random_paymaster_account
             .provider()
             .call(
@@ -82,7 +86,11 @@ impl RunnableTrait for TestCase {
                 },
                 BlockId::Tag(BlockTag::Latest),
             )
-            .await?[0];
+            .await?
+            .first()
+            .ok_or(OpenRpcTestGenError::Other(
+                "Empty updated contract balance".to_string(),
+            ))?;
 
         let updated_storage_value = test_input
             .random_paymaster_account
