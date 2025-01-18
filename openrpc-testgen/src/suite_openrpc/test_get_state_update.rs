@@ -74,7 +74,7 @@ impl RunnableTrait for TestCase {
         assert_result!(
             class_hash == Some(declaration_result.class_hash),
             format!(
-                "Mismatch in transaction hash. Expected: {:?}, Found: {:?}.",
+                "Mismatch in class hash. Expected: {:?}, Found: {:?}.",
                 Some(declaration_result.class_hash),
                 class_hash
             )

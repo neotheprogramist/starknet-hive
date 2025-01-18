@@ -534,7 +534,7 @@ where
             },
         };
         let invoke = prepared
-            .get_invoke_request(true, skip_signature)
+            .get_invoke_request(false, skip_signature)
             .await
             .map_err(AccountError::Signing)?;
 
@@ -773,6 +773,7 @@ where
 
     // The `simulate` function is temporarily removed until it's supported in [Provider]
     // TODO: add `simulate` back once transaction simulation in supported
+    // async fn simulate(&self, )
 
     async fn get_invoke_request(
         &self,
