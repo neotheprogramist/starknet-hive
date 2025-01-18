@@ -1,6 +1,5 @@
 pub mod transports;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use starknet::core::types::MaybePendingBlockWithReceipts;
 use starknet_types_rpc::{
     v0_7_1::{
         AddDeclareTransactionParams, AddDeployAccountTransactionParams, AddInvokeTransactionParams,
@@ -18,7 +17,7 @@ use starknet_types_rpc::{
         TraceBlockTransactionsResult, TraceTransactionParams, TransactionTrace, Txn,
         TxnFinalityAndExecutionStatus, TxnHash, TxnReceipt,
     },
-    GetBlockWithReceiptsParams,
+    BlockWithReceipts, GetBlockWithReceiptsParams,
 };
 use std::{any::Any, error::Error, fmt::Display};
 
@@ -243,9 +242,9 @@ where
     async fn get_block_with_receipts(
         &self,
         block_id: BlockId<FeltPrimitive>,
-    ) -> Result<MaybePendingBlockWithReceipts, ProviderError> {
+    ) -> Result<BlockWithReceipts<FeltPrimitive>, ProviderError> {
         self.send_request(
-            JsonRpcMethod::GetBlockWithTxs,
+            JsonRpcMethod::GetBlockWithReceipts,
             GetBlockWithTxsParams { block_id },
         )
         .await
