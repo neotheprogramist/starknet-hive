@@ -131,6 +131,14 @@ impl RunnableTrait for TestCase {
         };
 
         assert_result!(
+            events.continuation_token.is_none(),
+            format!(
+                "No continuation token expected. Expected None, got {:?}",
+                events.continuation_token
+            )
+        );
+
+        assert_result!(
             events.events.len() == 2,
             format!(
                 "Invalid events count, expected {}, got {}",

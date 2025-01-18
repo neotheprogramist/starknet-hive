@@ -94,123 +94,139 @@ impl RunnableTrait for TestCase {
             )
         );
 
-        // First event
+        let first_event = events
+            .events
+            .get(0)
+            .ok_or_else(|| OpenRpcTestGenError::Other("Failed to get first event".to_string()))?;
+
         assert_result!(
-            events.events[0].event.from_address == strk_address,
+            first_event.event.from_address == strk_address,
             format!(
                 "Invalid from address in event, expected {}, got {}",
-                strk_address, events.events[0].event.from_address
+                strk_address, first_event.event.from_address
             )
         );
 
         assert_result!(
-            events.events[0].event.data[0] == transfer_amount,
+            first_event.event.data.get(0) == Some(&transfer_amount),
             format!(
-                "Invalid transfer amount in event data, expected {}, got {}",
-                transfer_amount, events.events[0].event.data[0]
+                "Invalid transfer amount in event data, expected {}, got {:?}",
+                transfer_amount,
+                first_event.event.data.get(0)
             )
         );
 
         assert_result!(
-            events.events[0].event.data[1] == Felt::ZERO,
+            first_event.event.data.get(1) == Some(&Felt::ZERO),
             format!(
-                "Invalid transfer amount in event data, expected {}, got {}",
+                "Invalid transfer amount in event data, expected {}, got {:?}",
                 Felt::ZERO,
-                events.events[0].event.data[1]
+                first_event.event.data.get(1)
             )
         );
 
         let keccak_transfer = starknet_keccak("Transfer".as_bytes());
         assert_result!(
-            events.events[0].event.keys[0] == keccak_transfer,
+            first_event.event.keys.get(0) == Some(&keccak_transfer),
             format!(
-                "Invalid keccak transfer in event keys, expected {}, got {}",
-                keccak_transfer, events.events[0].event.keys[0]
+                "Invalid keccak transfer in event keys, expected {}, got {:?}",
+                keccak_transfer,
+                first_event.event.keys.get(0)
             )
         );
 
         let sender_address = sender.address();
         assert_result!(
-            events.events[0].event.keys[1] == sender_address,
+            first_event.event.keys.get(1) == Some(&sender_address),
             format!(
-                "Invalid sender address in event keys, expected {}, got {}",
-                sender_address, events.events[0].event.keys[1]
+                "Invalid sender address in event keys, expected {}, got {:?}",
+                sender_address,
+                first_event.event.keys.get(1)
             )
         );
 
         assert_result!(
-            events.events[0].event.keys[2] == receiptent_address,
+            first_event.event.keys.get(2) == Some(&receiptent_address),
             format!(
-                "Invalid receiptent address in event keys, expected {}, got {}",
-                receiptent_address, events.events[0].event.keys[2]
+                "Invalid recipient address in event keys, expected {}, got {:?}",
+                receiptent_address,
+                first_event.event.keys.get(2)
             )
         );
 
         assert_result!(
-            events.events[0].block_hash == Some(block_hash_and_number.block_hash),
+            first_event.block_hash == Some(block_hash_and_number.block_hash),
             format!(
                 "Invalid block hash in event, expected {:?}, got {:?}",
                 Some(block_hash_and_number.block_hash),
-                events.events[0].block_hash
+                first_event.block_hash
             )
         );
 
         assert_result!(
-            events.events[0].block_number == Some(block_hash_and_number.block_number),
+            first_event.block_number == Some(block_hash_and_number.block_number),
             format!(
                 "Invalid block number in event, expected {:?}, got {:?}",
                 Some(block_hash_and_number.block_number),
-                events.events[0].block_number
+                first_event.block_number
             )
         );
 
         assert_result!(
-            events.events[0].transaction_hash == transfer_execution.transaction_hash,
+            first_event.transaction_hash == transfer_execution.transaction_hash,
             format!(
                 "Invalid transaction hash in event, expected {:?}, got {:?}",
-                transfer_execution.transaction_hash, events.events[0].transaction_hash
+                transfer_execution.transaction_hash, first_event.transaction_hash
             )
         );
 
         // Second event
+        let second_event = events
+            .events
+            .get(1)
+            .ok_or_else(|| OpenRpcTestGenError::Other("Failed to get second event".to_string()))?;
+
         assert_result!(
-            events.events[1].event.from_address == strk_address,
+            second_event.event.from_address == strk_address,
             format!(
                 "Invalid from address in event, expected {}, got {}",
-                strk_address, events.events[1].event.from_address
+                strk_address, second_event.event.from_address
             )
         );
 
         assert_result!(
-            events.events[1].event.data[0] == estimate_fee.overall_fee,
+            second_event.event.data.get(0) == Some(&estimate_fee.overall_fee),
             format!(
-                "Invalid fee amount in event data, expected {}, got {}",
-                estimate_fee.overall_fee, events.events[1].event.data[0]
+                "Invalid fee amount in event data, expected {}, got {:?}",
+                estimate_fee.overall_fee,
+                second_event.event.data.get(0)
             )
         );
 
         assert_result!(
-            events.events[1].event.data[1] == Felt::ZERO,
+            second_event.event.data.get(1) == Some(&Felt::ZERO),
             format!(
-                "Invalid fee amount in event data, expected {}, got {}",
+                "Invalid fee amount in event data, expected {}, got {:?}",
                 Felt::ZERO,
-                events.events[1].event.data[1]
+                second_event.event.data.get(1)
             )
         );
 
         assert_result!(
-            events.events[1].event.keys[0] == keccak_transfer,
+            second_event.event.keys.get(0) == Some(&keccak_transfer),
             format!(
-                "Invalid keccak transfer in event keys, expected {}, got {}",
-                keccak_transfer, events.events[1].event.keys[0]
+                "Invalid keccak transfer in event keys, expected {}, got {:?}",
+                keccak_transfer,
+                second_event.event.keys.get(0)
             )
         );
 
         assert_result!(
-            events.events[1].event.keys[1] == sender_address,
+            second_event.event.keys.get(1) == Some(&sender_address),
             format!(
-                "Invalid sender address in event keys, expected {}, got {}",
-                sender_address, events.events[1].event.keys[1]
+                "Invalid sender address in event keys, expected {}, got {:?}",
+                sender_address,
+                second_event.event.keys.get(1)
             )
         );
 
@@ -230,36 +246,37 @@ impl RunnableTrait for TestCase {
             }
         };
         assert_result!(
-            events.events[1].event.keys[2] == sequencer_address,
+            second_event.event.keys.get(2) == Some(&sequencer_address),
             format!(
-                "Invalid sequencer address in event keys, expected {}, got {}",
-                sequencer_address, events.events[1].event.keys[2]
+                "Invalid sequencer address in event keys, expected {}, got {:?}",
+                sequencer_address,
+                second_event.event.keys.get(2)
             )
         );
 
         assert_result!(
-            events.events[1].block_hash == Some(block_hash_and_number.block_hash),
+            second_event.block_hash == Some(block_hash_and_number.block_hash),
             format!(
                 "Invalid block hash in event, expected {:?}, got {:?}",
                 Some(block_hash_and_number.block_hash),
-                events.events[1].block_hash
+                second_event.block_hash
             )
         );
 
         assert_result!(
-            events.events[1].block_number == Some(block_hash_and_number.block_number),
+            second_event.block_number == Some(block_hash_and_number.block_number),
             format!(
                 "Invalid block number in event, expected {:?}, got {:?}",
                 Some(block_hash_and_number.block_number),
-                events.events[1].block_number
+                second_event.block_number
             )
         );
 
         assert_result!(
-            events.events[1].transaction_hash == transfer_execution.transaction_hash,
+            second_event.transaction_hash == transfer_execution.transaction_hash,
             format!(
                 "Invalid transaction hash in event, expected {:?}, got {:?}",
-                transfer_execution.transaction_hash, events.events[1].transaction_hash
+                transfer_execution.transaction_hash, second_event.transaction_hash
             )
         );
 
