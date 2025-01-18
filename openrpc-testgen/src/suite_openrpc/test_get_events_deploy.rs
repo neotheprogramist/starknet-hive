@@ -139,141 +139,160 @@ impl RunnableTrait for TestCase {
             )
         );
 
+        let first_event = events
+            .events
+            .get(0)
+            .ok_or_else(|| OpenRpcTestGenError::Other("Failed to get first event".to_string()))?;
+
         let udc_address = test_input.udc_address;
         assert_result!(
-            events.events[0].event.from_address == udc_address,
+            first_event.event.from_address == udc_address,
             format!(
                 "Invalid udc (from) address in event, expected {:?}, got {:?}",
-                udc_address, events.events[0].event.from_address
+                udc_address, first_event.event.from_address
             )
         );
 
         assert_result!(
-            events.events[0].event.data[0] == deployed_contract_address,
+            first_event.event.data.get(0) == Some(&deployed_contract_address),
             format!(
                 "Invalid deployed contract address in event, expected {:?}, got {:?}",
-                deployed_contract_address, events.events[0].event.data[0]
+                deployed_contract_address,
+                first_event.event.data.get(0)
             )
         );
 
         let sender_address = sender.address();
         assert_result!(
-            events.events[0].event.data[1] == sender_address,
+            first_event.event.data.get(1) == Some(&sender_address),
             format!(
                 "Invalid sender address in event, expected {:?}, got {:?}",
-                sender_address, events.events[0].event.data[1]
+                sender_address,
+                first_event.event.data.get(1)
             )
         );
 
         assert_result!(
-            events.events[0].event.data[2] == Felt::ONE,
+            first_event.event.data.get(2) == Some(&Felt::ONE),
             format!(
                 "Invalid unique in event, expected {:?}, got {:?}",
                 Felt::ONE,
-                events.events[0].event.data[2]
+                first_event.event.data.get(2)
             )
         );
 
         assert_result!(
-            events.events[0].event.data[3] == declaration_result.class_hash,
+            first_event.event.data.get(3) == Some(&declaration_result.class_hash),
             format!(
                 "Invalid class hash in event, expected {:?}, got {:?}",
-                declaration_result.class_hash, events.events[0].event.data[3]
+                declaration_result.class_hash,
+                first_event.event.data.get(3)
             )
         );
 
-        let contructor_calldata_len = Felt::from_dec_str(&constructor_calldata.len().to_string())?;
+        let constructor_calldata_len = Felt::from_dec_str(&constructor_calldata.len().to_string())?;
         assert_result!(
-            events.events[0].event.data[4] == contructor_calldata_len,
+            first_event.event.data.get(4) == Some(&constructor_calldata_len),
             format!(
                 "Invalid constructor calldata length in event, expected {:?}, got {:?}",
-                contructor_calldata_len, events.events[0].event.data[4]
+                constructor_calldata_len,
+                first_event.event.data.get(4)
             )
         );
 
         assert_result!(
-            events.events[0].event.data[5] == salt,
+            first_event.event.data.get(5) == Some(&salt),
             format!(
                 "Invalid salt in event, expected {:?}, got {:?}",
-                salt, events.events[0].event.data[5]
+                salt,
+                first_event.event.data.get(5)
             )
         );
 
         let keccak_contract_deployed = starknet_keccak("ContractDeployed".as_bytes());
         assert_result!(
-            events.events[0].event.keys[0] == keccak_contract_deployed,
+            first_event.event.keys.get(0) == Some(&keccak_contract_deployed),
             format!(
                 "Invalid keccak transfer in event keys, expected {:?}, got {:?}",
-                keccak_contract_deployed, events.events[0].event.keys[0]
+                keccak_contract_deployed,
+                first_event.event.keys.get(0)
             )
         );
 
         assert_result!(
-            events.events[0].block_hash == Some(block_hash_and_number.block_hash),
+            first_event.block_hash == Some(block_hash_and_number.block_hash),
             format!(
                 "Invalid block hash in event, expected {:?}, got {:?}",
                 Some(block_hash_and_number.block_hash),
-                events.events[0].block_hash
+                first_event.block_hash
             )
         );
 
         assert_result!(
-            events.events[0].block_number == Some(block_hash_and_number.block_number),
+            first_event.block_number == Some(block_hash_and_number.block_number),
             format!(
                 "Invalid block number in event, expected {:?}, got {:?}",
                 Some(block_hash_and_number.block_number),
-                events.events[0].block_number
+                first_event.block_number
             )
         );
 
         assert_result!(
-            events.events[0].transaction_hash == deploy_result.transaction_hash,
+            first_event.transaction_hash == deploy_result.transaction_hash,
             format!(
                 "Invalid transaction hash in event, expected {:?}, got {:?}",
-                deploy_result.transaction_hash, events.events[0].transaction_hash
+                deploy_result.transaction_hash, first_event.transaction_hash
             )
         );
 
         // Second event
+        let second_event = events
+            .events
+            .get(1)
+            .ok_or_else(|| OpenRpcTestGenError::Other("Second event not found".to_string()))?;
+
         assert_result!(
-            events.events[1].event.from_address == strk_address,
+            second_event.event.from_address == strk_address,
             format!(
                 "Invalid from address in event, expected {}, got {}",
-                strk_address, events.events[1].event.from_address
+                strk_address, second_event.event.from_address
             )
         );
 
         assert_result!(
-            events.events[1].event.data[0] == estimate_fee.overall_fee,
+            second_event.event.data.get(0) == Some(&estimate_fee.overall_fee),
             format!(
-                "Invalid fee amount in event data, expected {}, got {}",
-                estimate_fee.overall_fee, events.events[1].event.data[0]
+                "Invalid fee amount in event data, expected {}, got {:?}",
+                estimate_fee.overall_fee,
+                second_event.event.data.get(0)
             )
         );
 
         assert_result!(
-            events.events[1].event.data[1] == Felt::ZERO,
+            second_event.event.data.get(1) == Some(&Felt::ZERO),
             format!(
-                "Invalid fee amount in event data, expected {}, got {}",
+                "Invalid fee amount in event data, expected {}, got {:?}",
                 Felt::ZERO,
-                events.events[1].event.data[1]
+                second_event.event.data.get(1)
             )
         );
 
         let keccak_transfer = starknet_keccak("Transfer".as_bytes());
         assert_result!(
-            events.events[1].event.keys[0] == keccak_transfer,
+            second_event.event.keys.get(0) == Some(&keccak_transfer),
             format!(
-                "Invalid keccak transfer in event keys, expected {}, got {}",
-                keccak_transfer, events.events[1].event.keys[0]
+                "Invalid keccak transfer in event keys, expected {}, got {:?}",
+                keccak_transfer,
+                second_event.event.keys.get(0)
             )
         );
 
         assert_result!(
-            events.events[1].event.keys[1] == sender_address,
+            second_event.event.keys.get(1) == Some(&sender_address),
             format!(
-                "Invalid sender address in event keys, expected {}, got {}",
-                sender_address, events.events[1].event.keys[1]
+                "Invalid sender address in event keys, expected {}, got {:?}",
+                sender_address,
+                second_event.event.keys.get(1)
             )
         );
 
@@ -293,39 +312,39 @@ impl RunnableTrait for TestCase {
             }
         };
         assert_result!(
-            events.events[1].event.keys[2] == sequencer_address,
+            second_event.event.keys.get(2) == Some(&sequencer_address),
             format!(
-                "Invalid sequencer address in event keys, expected {}, got {}",
-                sequencer_address, events.events[1].event.keys[2]
+                "Invalid sequencer address in event keys, expected {}, got {:?}",
+                sequencer_address,
+                second_event.event.keys.get(2)
             )
         );
 
         assert_result!(
-            events.events[1].block_hash == Some(block_hash_and_number.block_hash),
+            second_event.block_hash == Some(block_hash_and_number.block_hash),
             format!(
                 "Invalid block hash in event, expected {:?}, got {:?}",
                 Some(block_hash_and_number.block_hash),
-                events.events[1].block_hash
+                second_event.block_hash
             )
         );
 
         assert_result!(
-            events.events[1].block_number == Some(block_hash_and_number.block_number),
+            second_event.block_number == Some(block_hash_and_number.block_number),
             format!(
                 "Invalid block number in event, expected {:?}, got {:?}",
                 Some(block_hash_and_number.block_number),
-                events.events[1].block_number
+                second_event.block_number
             )
         );
 
         assert_result!(
-            events.events[1].transaction_hash == deploy_result.transaction_hash,
+            second_event.transaction_hash == deploy_result.transaction_hash,
             format!(
                 "Invalid transaction hash in event, expected {:?}, got {:?}",
-                deploy_result.transaction_hash, events.events[1].transaction_hash
+                deploy_result.transaction_hash, second_event.transaction_hash
             )
         );
-
         Ok(Self {})
     }
 }
