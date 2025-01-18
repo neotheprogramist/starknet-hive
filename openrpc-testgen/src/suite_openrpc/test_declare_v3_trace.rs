@@ -153,7 +153,7 @@ impl RunnableTrait for TestCase {
                     "Contract address not found in state diff nonces".to_string(),
                 )
             })?;
-        
+
         // Validate that the contract address in the state diff matches the expected account address
         assert_result!(
             state_diff_contract_address == account_address,
