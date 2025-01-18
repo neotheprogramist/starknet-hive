@@ -171,8 +171,8 @@ impl RunnableTrait for TestCase {
                 )
             })?;
 
-        // Retrieve the public key storage variable key from state diff
-        let state_diff_public_key_storage_var = state_diff
+        // Index of the public key storage variable in the storage entries
+        let public_key_entry_index = state_diff
             .storage_diffs
             .get(deployed_account_index)
             .ok_or_else(|| {
@@ -182,33 +182,32 @@ impl RunnableTrait for TestCase {
                 ))
             })?
             .storage_entries
-            .get(0)
+            .iter()
+            .position(|entry| entry.key == Some(public_key_storage_var))
             .ok_or_else(|| {
-                OpenRpcTestGenError::Other("No storage entries found in storage diff".to_string())
-            })?
-            .key
+                OpenRpcTestGenError::Other(
+                    "Public key storage variable not found in storage entries".to_string(),
+                )
+            })?;
+
+        // Retrieve the public key storage variable key from the storage entry
+        let state_diff_public_key_storage_var = state_diff
+            .storage_diffs
+            .get(deployed_account_index)
+            .and_then(|diff| diff.storage_entries.get(public_key_entry_index))
+            .and_then(|entry| entry.key)
             .ok_or_else(|| {
                 OpenRpcTestGenError::Other(
                     "Public key storage var is missing in storage entry".to_string(),
                 )
             })?;
 
-        // Retrieve the public key storage variable value from state diff
+        // Retrieve the public key storage variable value from the storage entry
         let state_diff_public_key_storage_value = state_diff
             .storage_diffs
             .get(deployed_account_index)
-            .ok_or_else(|| {
-                OpenRpcTestGenError::Other(format!(
-                    "No storage diff found for deployed account index: {}",
-                    deployed_account_index
-                ))
-            })?
-            .storage_entries
-            .get(0)
-            .ok_or_else(|| {
-                OpenRpcTestGenError::Other("No storage entries found in storage diff".to_string())
-            })?
-            .value
+            .and_then(|diff| diff.storage_entries.get(public_key_entry_index))
+            .and_then(|entry| entry.value)
             .ok_or_else(|| {
                 OpenRpcTestGenError::Other(
                     "Public key storage value is missing in storage entry".to_string(),
