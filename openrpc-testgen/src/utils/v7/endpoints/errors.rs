@@ -78,6 +78,8 @@ pub enum OpenRpcTestGenError {
     EmptyUrlList(String),
     #[error("Transaction with hash {0} not found in the block")]
     TransactionNotFound(String),
+    #[error(transparent)]
+    T9nError(#[from] t9n::txn_validation::errors::Error),
     #[error("Transaction index overflowed when converting to u64")]
     TransactionIndexOverflow,
     #[error("Unexpected error occured: {0}")]
