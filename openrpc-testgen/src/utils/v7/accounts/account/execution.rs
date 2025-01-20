@@ -367,6 +367,12 @@ where
         self.prepare().await?.send().await
     }
 
+    pub async fn prepare_without_send(
+        &self,
+    ) -> Result<PreparedExecutionV3<'a, A>, AccountError<A::SignError>> {
+        self.prepare().await
+    }
+
     async fn prepare(&self) -> Result<PreparedExecutionV3<'a, A>, AccountError<A::SignError>> {
         // Resolves nonce
         let nonce = match self.nonce {
@@ -417,7 +423,6 @@ where
             // We have to perform fee estimation as long as gas is not specified
             _ => {
                 let fee_estimate = self.estimate_fee_with_nonce(nonce).await?;
-
                 let gas = match self.gas {
                     Some(gas) => gas,
                     None => {
@@ -534,7 +539,7 @@ where
             },
         };
         let invoke = prepared
-            .get_invoke_request(true, skip_signature)
+            .get_invoke_request(false, skip_signature)
             .await
             .map_err(AccountError::Signing)?;
 
@@ -771,10 +776,22 @@ where
             .map_err(AccountError::Provider)
     }
 
+    pub async fn send_from_request(
+        &self,
+        tx_request: InvokeTxnV3<Felt>,
+    ) -> Result<AddInvokeTransactionResult<Felt>, AccountError<A::SignError>> {
+        self.account
+            .provider()
+            .add_invoke_transaction(BroadcastedTxn::Invoke(BroadcastedInvokeTxn::V3(tx_request)))
+            .await
+            .map_err(AccountError::Provider)
+    }
+
     // The `simulate` function is temporarily removed until it's supported in [Provider]
     // TODO: add `simulate` back once transaction simulation in supported
+    // async fn simulate(&self, )
 
-    async fn get_invoke_request(
+    pub async fn get_invoke_request(
         &self,
         query_only: bool,
         skip_signature: bool,

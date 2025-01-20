@@ -17,6 +17,7 @@ use starknet_types_rpc::{
     BlockId, BlockStatus, BlockTag, DaMode, DeclareTxn, PriceUnit, TransactionAndReceipt, Txn,
     TxnFinalityStatus, TxnReceipt,
 };
+use t9n::txn_validation::declare::verify_declare_v3_signature;
 
 const STRK_GAS_PRICE: Felt = Felt::from_hex_unchecked("0xa");
 const STRK_BLOB_GAS_PRICE: Felt = Felt::from_hex_unchecked("0x14");
@@ -47,21 +48,38 @@ impl RunnableTrait for TestCase {
 
         let sender = test_input.random_paymaster_account.random_accounts()?;
         let sender_nonce = sender.get_nonce().await?;
+        let chain_id = sender.provider().chain_id().await?;
 
         let estimate_fee = sender
             .declare_v3(flattened_sierra_class.clone(), compiled_class_hash)
             .estimate_fee()
             .await?;
 
-        let declaration_result = sender
+        let prepared_declaration_v3 = sender
             .declare_v3(flattened_sierra_class, compiled_class_hash)
             .gas(DECLARE_TXN_GAS)
             .gas_price(DECLARE_TXN_GAS_PRICE)
-            .send()
+            .prepare_without_send()
+            .await?;
+
+        let declare_v3_request = prepared_declaration_v3
+            .get_declare_request(false, false)
+            .await?;
+
+        let (valid_signature, declare_tx_hash) = verify_declare_v3_signature(
+            &declare_v3_request,
+            None,
+            chain_id.to_hex_string().as_str(),
+        )?;
+
+        let signature = declare_v3_request.clone().signature;
+
+        let class_and_tx_hash = prepared_declaration_v3
+            .send_from_request(declare_v3_request)
             .await?;
 
         wait_for_sent_transaction(
-            declaration_result.transaction_hash,
+            class_and_tx_hash.transaction_hash,
             &test_input.random_paymaster_account.random_accounts()?,
         )
         .await?;
@@ -199,10 +217,10 @@ impl RunnableTrait for TestCase {
         );
 
         assert_result!(
-            declare_tx.class_hash == declaration_result.class_hash,
+            declare_tx.class_hash == class_and_tx_hash.class_hash,
             format!(
                 "Expected class hash to be {:?}, got {:?}",
-                declaration_result.class_hash, declare_tx.class_hash
+                class_and_tx_hash.class_hash, declare_tx.class_hash
             )
         );
 
@@ -251,6 +269,27 @@ impl RunnableTrait for TestCase {
             format!(
                 "Expected sender address to be {:?}, got {:?}",
                 sender_address, declare_tx.sender_address
+            )
+        );
+
+        assert_result!(
+            valid_signature,
+            format!("Invalid signature, checked by t9n.",)
+        );
+
+        assert_result!(
+            declare_tx.signature == signature,
+            format!(
+                "Expected signature: {:?}, got {:?}",
+                signature, declare_tx.signature
+            )
+        );
+
+        assert_result!(
+            declare_receipt.common_receipt_properties.transaction_hash == declare_tx_hash,
+            format!(
+                "Expected declare transaction hash: {:?}, got {:?}",
+                declare_tx_hash, declare_receipt.common_receipt_properties.transaction_hash
             )
         );
 
@@ -420,12 +459,10 @@ impl RunnableTrait for TestCase {
         );
 
         assert_result!(
-            declare_receipt.common_receipt_properties.transaction_hash
-                == declaration_result.transaction_hash,
+            declare_receipt.common_receipt_properties.transaction_hash == declare_tx_hash,
             format!(
                 "Exptected transaction hash to be {:?}, got {:?}",
-                declaration_result.transaction_hash,
-                declare_receipt.common_receipt_properties.transaction_hash
+                declare_tx_hash, declare_receipt.common_receipt_properties.transaction_hash
             )
         );
 
