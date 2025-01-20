@@ -3,7 +3,7 @@ use std::{path::PathBuf, str::FromStr};
 use crate::{
     assert_result,
     utils::v7::{
-        accounts::account::{Account, ConnectedAccount},
+        accounts::account::{starknet_keccak, Account, ConnectedAccount},
         endpoints::{
             declare_contract::get_compiled_contract, errors::OpenRpcTestGenError,
             utils::wait_for_sent_transaction,
@@ -15,7 +15,7 @@ use crate::{
 use starknet_types_core::felt::Felt;
 use starknet_types_rpc::{
     BlockId, BlockStatus, BlockTag, DaMode, DeclareTxn, PriceUnit, TransactionAndReceipt, Txn,
-    TxnReceipt,
+    TxnFinalityStatus, TxnReceipt,
 };
 
 const STRK_GAS_PRICE: Felt = Felt::from_hex_unchecked("0xa");
@@ -24,6 +24,10 @@ const GAS_PRICE: Felt = Felt::from_hex_unchecked("0x1e");
 const BLOB_GAS_PRICE: Felt = Felt::from_hex_unchecked("0x28");
 const DECLARE_TXN_GAS: u64 = 48000;
 const DECLARE_TXN_GAS_PRICE: u128 = 17;
+const STRK_ADDRESS: Felt =
+    Felt::from_hex_unchecked("0x4718F5A0FC34CC1AF16A1CDEE98FFB20C31F5CD61D6AB07201858F4287C938D");
+const SEQUENCER_ADDRESS: Felt = Felt::from_hex_unchecked("0x123");
+
 #[derive(Clone, Debug)]
 pub struct TestCase {}
 
@@ -49,7 +53,7 @@ impl RunnableTrait for TestCase {
             .estimate_fee()
             .await?;
 
-        let declaration_hash = sender
+        let declaration_result = sender
             .declare_v3(flattened_sierra_class, compiled_class_hash)
             .gas(DECLARE_TXN_GAS)
             .gas_price(DECLARE_TXN_GAS_PRICE)
@@ -57,7 +61,7 @@ impl RunnableTrait for TestCase {
             .await?;
 
         wait_for_sent_transaction(
-            declaration_hash.transaction_hash,
+            declaration_result.transaction_hash,
             &test_input.random_paymaster_account.random_accounts()?,
         )
         .await?;
@@ -161,12 +165,7 @@ impl RunnableTrait for TestCase {
                 } => {
                     let declare_tx = match transaction {
                         Txn::Declare(declare_tx) => match declare_tx {
-                            DeclareTxn::V3(v3_tx) => {
-                                println!("{:?}", estimate_fee);
-
-                                println!("Transaction is V3: {:#?}", v3_tx);
-                                v3_tx
-                            }
+                            DeclareTxn::V3(v3_tx) => v3_tx,
                             _ => {
                                 return Err(OpenRpcTestGenError::UnexpectedTxnType(
                                     "Expected Declare V3 Transaction.".to_string(),
@@ -181,10 +180,7 @@ impl RunnableTrait for TestCase {
                     };
 
                     let declare_receipt = match receipt {
-                        TxnReceipt::Declare(declare_receipt) => {
-                            println!("declare_receipt: {:#?}", declare_receipt);
-                            declare_receipt
-                        }
+                        TxnReceipt::Declare(declare_receipt) => declare_receipt,
                         _ => {
                             return Err(OpenRpcTestGenError::UnexpectedTxnType(
                                 "Expected Declare Transaction Receipt.".to_string(),
@@ -203,10 +199,10 @@ impl RunnableTrait for TestCase {
         );
 
         assert_result!(
-            declare_tx.class_hash == declaration_hash.class_hash,
+            declare_tx.class_hash == declaration_result.class_hash,
             format!(
                 "Expected class hash to be {:?}, got {:?}",
-                declaration_hash.class_hash, declare_tx.class_hash
+                declaration_result.class_hash, declare_tx.class_hash
             )
         );
 
@@ -332,6 +328,125 @@ impl RunnableTrait for TestCase {
             .events
             .first()
             .ok_or_else(|| OpenRpcTestGenError::Other("Event missing".to_string()))?;
+
+        assert_result!(
+            event.from_address == STRK_ADDRESS,
+            format!(
+                "Expected event from address to be {:?}, got {:?}",
+                STRK_ADDRESS, event.from_address
+            )
+        );
+
+        let event_data_first = *event
+            .data
+            .first()
+            .ok_or_else(|| OpenRpcTestGenError::Other("Missing first event data".to_string()))?;
+
+        assert_result!(
+            event_data_first == estimate_fee.overall_fee,
+            format!(
+                "Expected first event data to be {:?}, got {:?}",
+                estimate_fee.overall_fee, event_data_first
+            )
+        );
+
+        let event_data_second = *event
+            .data
+            .get(1)
+            .ok_or_else(|| OpenRpcTestGenError::Other("Missing first event data".to_string()))?;
+
+        let expected_event_second_data = Felt::ZERO;
+
+        assert_result!(
+            event_data_second == expected_event_second_data,
+            format!(
+                "Expected second event data to be {:?}, got {:?}",
+                expected_event_second_data, event_data_second
+            )
+        );
+
+        let event_keys_first = *event
+            .keys
+            .first()
+            .ok_or_else(|| OpenRpcTestGenError::Other("Missing first event key".to_string()))?;
+        let transfer_keccak = starknet_keccak("Transfer".as_bytes());
+        assert_result!(
+            event_keys_first == transfer_keccak,
+            format!(
+                "Expected first event key to be {:?}, got {:?}",
+                transfer_keccak, event_keys_first
+            )
+        );
+
+        let event_keys_second = *event
+            .keys
+            .get(1)
+            .ok_or_else(|| OpenRpcTestGenError::Other("Missing second event key".to_string()))?;
+        assert_result!(
+            event_keys_second == sender_address,
+            format!(
+                "Expected second event key to be {:?}, got {:?}",
+                sender_address, event_keys_second
+            )
+        );
+
+        let event_keys_third = *event
+            .keys
+            .get(2)
+            .ok_or_else(|| OpenRpcTestGenError::Other("Missing third event key".to_string()))?;
+        assert_result!(
+            event_keys_third == SEQUENCER_ADDRESS,
+            format!(
+                "Expected third event key to be {:?}, got {:?}",
+                SEQUENCER_ADDRESS, event_keys_third
+            )
+        );
+
+        assert_result!(
+            declare_receipt.common_receipt_properties.finality_status == TxnFinalityStatus::L2,
+            format!(
+                "Exptected finality status to be {:?}, got {:?}",
+                TxnFinalityStatus::L2,
+                declare_receipt.common_receipt_properties.finality_status
+            )
+        );
+
+        assert_result!(
+            declare_receipt
+                .common_receipt_properties
+                .messages_sent
+                .is_empty(),
+            "Expected messages sent to be empty."
+        );
+
+        assert_result!(
+            declare_receipt.common_receipt_properties.transaction_hash
+                == declaration_result.transaction_hash,
+            format!(
+                "Exptected transaction hash to be {:?}, got {:?}",
+                declaration_result.transaction_hash,
+                declare_receipt.common_receipt_properties.transaction_hash
+            )
+        );
+
+        let execution_status = match declare_receipt.common_receipt_properties.anon.clone() {
+            starknet_types_rpc::Anonymous::Successful(status) => status.execution_status,
+            _ => {
+                return Err(OpenRpcTestGenError::Other(
+                    "Unexpected execution status type.".to_string(),
+                ));
+            }
+        };
+
+        let expected_execution_status = "SUCCEEDED".to_string();
+
+        assert_result!(
+            execution_status == expected_execution_status,
+            format!(
+                "Expected execution status to be {:?}, got {:?}",
+                expected_execution_status, execution_status
+            )
+        );
 
         Ok(Self {})
     }
