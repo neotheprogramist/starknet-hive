@@ -14,7 +14,8 @@ use crate::{
 };
 use starknet_types_core::felt::Felt;
 use starknet_types_rpc::{
-    BlockId, BlockStatus, BlockTag, DaMode, DeclareTxn, TransactionAndReceipt, Txn, TxnReceipt,
+    BlockId, BlockStatus, BlockTag, DaMode, DeclareTxn, PriceUnit, TransactionAndReceipt, Txn,
+    TxnReceipt,
 };
 
 const STRK_GAS_PRICE: Felt = Felt::from_hex_unchecked("0xa");
@@ -195,6 +196,7 @@ impl RunnableTrait for TestCase {
                 }
             };
 
+        // Declare Txn
         assert_result!(
             declare_tx.account_deployment_data.is_empty(),
             "Expected account deployment data to be empty"
@@ -256,7 +258,7 @@ impl RunnableTrait for TestCase {
             )
         );
 
-        let expected_tip = "0x0";
+        let expected_tip = Felt::ZERO.to_hex_string();
         assert_result!(
             declare_tx.tip == expected_tip,
             format!(
@@ -305,9 +307,31 @@ impl RunnableTrait for TestCase {
             )
         );
 
-        // let transaction = *block_with_receipts.transactions.first().ok_or_else(|| {
-        //     OpenRpcTestGenError::Other("Transaction not found in block with receipts".to_string())
-        // })?;
+        // Declare receipt
+        let actual_fee = declare_receipt.common_receipt_properties.actual_fee.clone();
+
+        assert_result!(
+            actual_fee.amount == estimate_fee.overall_fee,
+            format!(
+                "Expected overall fee to be {:?}, got {:?}",
+                estimate_fee.overall_fee, actual_fee.unit
+            )
+        );
+
+        assert_result!(
+            actual_fee.unit == PriceUnit::Fri,
+            format!(
+                "Expected price unit to be {:?}, got {:?}",
+                PriceUnit::Fri,
+                actual_fee.unit
+            )
+        );
+
+        let event = declare_receipt
+            .common_receipt_properties
+            .events
+            .first()
+            .ok_or_else(|| OpenRpcTestGenError::Other("Event missing".to_string()))?;
 
         Ok(Self {})
     }
