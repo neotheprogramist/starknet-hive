@@ -171,44 +171,37 @@ impl RunnableTrait for TestCase {
             )
         );
 
-        let (declare_tx, declare_receipt) =
-            match block_with_receipts.transactions.first().ok_or_else(|| {
-                OpenRpcTestGenError::Other(
-                    "Transaction not found in block with receipts".to_string(),
-                )
-            })? {
-                TransactionAndReceipt {
-                    transaction,
-                    receipt,
-                } => {
-                    let declare_tx = match transaction {
-                        Txn::Declare(declare_tx) => match declare_tx {
-                            DeclareTxn::V3(v3_tx) => v3_tx,
-                            _ => {
-                                return Err(OpenRpcTestGenError::UnexpectedTxnType(
-                                    "Expected Declare V3 Transaction.".to_string(),
-                                ));
-                            }
-                        },
-                        _ => {
-                            return Err(OpenRpcTestGenError::UnexpectedTxnType(
-                                "Expected Declare Transaction.".to_string(),
-                            ));
-                        }
-                    };
+        let TransactionAndReceipt {
+            transaction,
+            receipt,
+        } = block_with_receipts.transactions.first().ok_or_else(|| {
+            OpenRpcTestGenError::Other("Transaction not found in block with receipts".to_string())
+        })?;
 
-                    let declare_receipt = match receipt {
-                        TxnReceipt::Declare(declare_receipt) => declare_receipt,
-                        _ => {
-                            return Err(OpenRpcTestGenError::UnexpectedTxnType(
-                                "Expected Declare Transaction Receipt.".to_string(),
-                            ));
-                        }
-                    };
-
-                    (declare_tx, declare_receipt)
+        let declare_tx = match transaction {
+            Txn::Declare(declare_tx) => match declare_tx {
+                DeclareTxn::V3(v3_tx) => v3_tx,
+                _ => {
+                    return Err(OpenRpcTestGenError::UnexpectedTxnType(
+                        "Expected Declare V3 Transaction.".to_string(),
+                    ));
                 }
-            };
+            },
+            _ => {
+                return Err(OpenRpcTestGenError::UnexpectedTxnType(
+                    "Expected Declare Transaction.".to_string(),
+                ));
+            }
+        };
+
+        let declare_receipt = match receipt {
+            TxnReceipt::Declare(declare_receipt) => declare_receipt,
+            _ => {
+                return Err(OpenRpcTestGenError::UnexpectedTxnType(
+                    "Expected Declare Transaction Receipt.".to_string(),
+                ));
+            }
+        };
 
         // Declare Txn
         assert_result!(
