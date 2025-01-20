@@ -17,7 +17,7 @@ use starknet_types_rpc::{
     BlockId, BlockStatus, BlockTag, DaMode, DeclareTxn, PriceUnit, TransactionAndReceipt, Txn,
     TxnReceipt,
 };
-
+use t9n::txn_validation::declare::verify_declare_v3_signature;
 const STRK_GAS_PRICE: Felt = Felt::from_hex_unchecked("0xa");
 const STRK_BLOB_GAS_PRICE: Felt = Felt::from_hex_unchecked("0x14");
 const GAS_PRICE: Felt = Felt::from_hex_unchecked("0x1e");
@@ -43,21 +43,38 @@ impl RunnableTrait for TestCase {
 
         let sender = test_input.random_paymaster_account.random_accounts()?;
         let sender_nonce = sender.get_nonce().await?;
+        let chain_id = sender.provider().chain_id().await?;
 
         let estimate_fee = sender
             .declare_v3(flattened_sierra_class.clone(), compiled_class_hash)
             .estimate_fee()
             .await?;
 
-        let declaration_hash = sender
+        let prepared_declaration_v3 = sender
             .declare_v3(flattened_sierra_class, compiled_class_hash)
             .gas(DECLARE_TXN_GAS)
             .gas_price(DECLARE_TXN_GAS_PRICE)
-            .send()
+            .prepare_without_send()
             .await?;
 
+        let declare_v3_request = prepared_declaration_v3
+            .get_declare_request(false, false)
+            .await?;
+
+        let is_valid_signature_and_hash = verify_declare_v3_signature(
+            &declare_v3_request,
+            None,
+            chain_id.to_hex_string().as_str(),
+        )?;
+
+        println!("t9n output {:?}", is_valid_signature_and_hash);
+
+        let class_and_tx_hash = prepared_declaration_v3
+            .send_from_request(declare_v3_request)
+            .await?; // or use prepared_declaration_v3.send().await()
+
         wait_for_sent_transaction(
-            declaration_hash.transaction_hash,
+            class_and_tx_hash.transaction_hash,
             &test_input.random_paymaster_account.random_accounts()?,
         )
         .await?;
@@ -203,10 +220,10 @@ impl RunnableTrait for TestCase {
         );
 
         assert_result!(
-            declare_tx.class_hash == declaration_hash.class_hash,
+            declare_tx.class_hash == class_and_tx_hash.class_hash,
             format!(
                 "Expected class hash to be {:?}, got {:?}",
-                declaration_hash.class_hash, declare_tx.class_hash
+                class_and_tx_hash.class_hash, declare_tx.class_hash
             )
         );
 

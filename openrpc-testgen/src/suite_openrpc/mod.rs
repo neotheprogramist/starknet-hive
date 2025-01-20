@@ -46,6 +46,7 @@ pub mod test_estimate_fee_fri;
 pub mod test_estimate_fee_wei;
 pub mod test_get_block_number;
 pub mod test_get_block_txn_count;
+pub mod test_get_block_with_receipts_declare_v3;
 pub mod test_get_block_with_tx_hashes;
 pub mod test_get_block_with_txs;
 pub mod test_get_chain_id;
