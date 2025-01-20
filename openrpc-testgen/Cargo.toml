@@ -34,6 +34,7 @@ tokio.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true
 url.workspace = true
+t9n ={ path="../t9n" }
 
 [features]
 no_unknown_fields = []
