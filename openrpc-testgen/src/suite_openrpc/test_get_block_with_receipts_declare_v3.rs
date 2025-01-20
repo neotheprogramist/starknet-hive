@@ -61,17 +61,17 @@ impl RunnableTrait for TestCase {
             .get_declare_request(false, false)
             .await?;
 
-        let is_valid_signature_and_hash = verify_declare_v3_signature(
+        let (valid_signature, declare_tx_hash)  = verify_declare_v3_signature(
             &declare_v3_request,
             None,
             chain_id.to_hex_string().as_str(),
         )?;
 
-        println!("t9n output {:?}", is_valid_signature_and_hash);
+        let signature = declare_v3_request.clone().signature;
 
         let class_and_tx_hash = prepared_declaration_v3
             .send_from_request(declare_v3_request)
-            .await?; // or use prepared_declaration_v3.send().await()
+            .await?; 
 
         wait_for_sent_transaction(
             class_and_tx_hash.transaction_hash,
@@ -272,6 +272,29 @@ impl RunnableTrait for TestCase {
             format!(
                 "Expected sender address to be {:?}, got {:?}",
                 sender_address, declare_tx.sender_address
+            )
+        );
+
+        assert_result!(
+            valid_signature,
+            format!(
+                "Invalid signature, checked by t9n.",
+            )
+        );
+
+        assert_result!(
+            declare_tx.signature == signature,
+            format!(
+                "Expected signature: {:?}, got {:?}",
+                signature, declare_tx.signature
+            )
+        );
+
+        assert_result!(
+            declare_receipt.common_receipt_properties.transaction_hash == declare_tx_hash,
+            format!(
+                "Expected declare transaction hash: {:?}, got {:?}",
+                declare_tx_hash, declare_receipt.common_receipt_properties.transaction_hash
             )
         );
 
