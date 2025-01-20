@@ -1,12 +1,16 @@
 use auto_impl::auto_impl;
 use serde::{Deserialize, Serialize};
 use starknet_types_core::felt::Felt;
-use starknet_types_rpc::v0_7_1::{
-    AddInvokeTransactionResult, BlockHashAndNumber, BlockId, BroadcastedTxn, ClassAndTxnHash,
-    ContractAndTxnHash, ContractClass, EventFilterWithPageRequest, EventsChunk, FeeEstimate,
-    FunctionCall, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, MaybePendingStateUpdate,
-    MsgFromL1, SimulateTransactionsResult, SimulationFlag, SyncingStatus,
-    TraceBlockTransactionsResult, TransactionTrace, Txn, TxnFinalityAndExecutionStatus, TxnReceipt,
+use starknet_types_rpc::{
+    v0_7_1::{
+        AddInvokeTransactionResult, BlockHashAndNumber, BlockId, BroadcastedTxn, ClassAndTxnHash,
+        ContractAndTxnHash, ContractClass, EventFilterWithPageRequest, EventsChunk, FeeEstimate,
+        FunctionCall, MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs,
+        MaybePendingStateUpdate, MsgFromL1, SimulateTransactionsResult, SimulationFlag,
+        SyncingStatus, TraceBlockTransactionsResult, TransactionTrace, Txn,
+        TxnFinalityAndExecutionStatus, TxnReceipt,
+    },
+    BlockWithReceipts,
 };
 
 use std::{any::Any, error::Error, fmt::Debug};
@@ -35,6 +39,11 @@ pub trait Provider {
         &self,
         block_id: BlockId<Felt>,
     ) -> impl std::future::Future<Output = Result<MaybePendingBlockWithTxs<Felt>, ProviderError>>;
+
+    fn get_block_with_receipts(
+        &self,
+        block_id: BlockId<Felt>,
+    ) -> impl std::future::Future<Output = Result<BlockWithReceipts<Felt>, ProviderError>>;
 
     /// Get the information about the result of executing the requested block
     fn get_state_update(

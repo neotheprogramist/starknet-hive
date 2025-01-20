@@ -1,20 +1,23 @@
 pub mod transports;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
-use starknet_types_rpc::v0_7_1::{
-    AddDeclareTransactionParams, AddDeployAccountTransactionParams, AddInvokeTransactionParams,
-    AddInvokeTransactionResult, BlockHashAndNumber, BlockHashAndNumberParams, BlockId,
-    BlockNumberParams, BroadcastedTxn, CallParams, ChainIdParams, ClassAndTxnHash,
-    ContractAndTxnHash, ContractClass, EstimateFeeParams, EstimateMessageFeeParams,
-    EventFilterWithPageRequest, EventsChunk, FeeEstimate, FunctionCall,
-    GetBlockTransactionCountParams, GetBlockWithTxHashesParams, GetBlockWithTxsParams,
-    GetClassAtParams, GetClassHashAtParams, GetClassParams, GetEventsParams, GetNonceParams,
-    GetStateUpdateParams, GetStorageAtParams, GetTransactionByBlockIdAndIndexParams,
-    GetTransactionByHashParams, GetTransactionReceiptParams, GetTransactionStatusParams,
-    MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, MaybePendingStateUpdate, MsgFromL1,
-    SimulateTransactionsParams, SimulateTransactionsResult, SimulationFlag, SpecVersionParams,
-    SyncingParams, SyncingStatus, TraceBlockTransactionsParams, TraceBlockTransactionsResult,
-    TraceTransactionParams, TransactionTrace, Txn, TxnFinalityAndExecutionStatus, TxnHash,
-    TxnReceipt,
+use starknet_types_rpc::{
+    v0_7_1::{
+        AddDeclareTransactionParams, AddDeployAccountTransactionParams, AddInvokeTransactionParams,
+        AddInvokeTransactionResult, BlockHashAndNumber, BlockHashAndNumberParams, BlockId,
+        BlockNumberParams, BroadcastedTxn, CallParams, ChainIdParams, ClassAndTxnHash,
+        ContractAndTxnHash, ContractClass, EstimateFeeParams, EstimateMessageFeeParams,
+        EventFilterWithPageRequest, EventsChunk, FeeEstimate, FunctionCall,
+        GetBlockTransactionCountParams, GetBlockWithTxHashesParams, GetBlockWithTxsParams,
+        GetClassAtParams, GetClassHashAtParams, GetClassParams, GetEventsParams, GetNonceParams,
+        GetStateUpdateParams, GetStorageAtParams, GetTransactionByBlockIdAndIndexParams,
+        GetTransactionByHashParams, GetTransactionReceiptParams, GetTransactionStatusParams,
+        MaybePendingBlockWithTxHashes, MaybePendingBlockWithTxs, MaybePendingStateUpdate,
+        MsgFromL1, SimulateTransactionsParams, SimulateTransactionsResult, SimulationFlag,
+        SpecVersionParams, SyncingParams, SyncingStatus, TraceBlockTransactionsParams,
+        TraceBlockTransactionsResult, TraceTransactionParams, TransactionTrace, Txn,
+        TxnFinalityAndExecutionStatus, TxnHash, TxnReceipt,
+    },
+    BlockWithReceipts, GetBlockWithReceiptsParams,
 };
 use std::{any::Any, error::Error, fmt::Display};
 
@@ -35,6 +38,8 @@ pub enum JsonRpcMethod {
     GetBlockWithTxHashes,
     #[serde(rename = "starknet_getBlockWithTxs")]
     GetBlockWithTxs,
+    #[serde(rename = "starknet_getBlockWithReceipts")]
+    GetBlockWithReceipts,
     #[serde(rename = "starknet_getStateUpdate")]
     GetStateUpdate,
     #[serde(rename = "starknet_getStorageAt")]
@@ -98,6 +103,7 @@ pub enum JsonRpcRequestData {
     SpecVersion(SpecVersionParams),
     GetBlockWithTxHashes(GetBlockWithTxHashesParams<FeltPrimitive>),
     GetBlockWithTxs(GetBlockWithTxsParams<FeltPrimitive>),
+    GetBlockWithReceipts(GetBlockWithReceiptsParams<FeltPrimitive>),
     GetStateUpdate(GetStateUpdateParams<FeltPrimitive>),
     GetStorageAt(GetStorageAtParams<FeltPrimitive>),
     GetTransactionStatus(GetTransactionStatusParams<FeltPrimitive>),
@@ -228,6 +234,17 @@ where
     ) -> Result<MaybePendingBlockWithTxs<FeltPrimitive>, ProviderError> {
         self.send_request(
             JsonRpcMethod::GetBlockWithTxs,
+            GetBlockWithTxsParams { block_id },
+        )
+        .await
+    }
+
+    async fn get_block_with_receipts(
+        &self,
+        block_id: BlockId<FeltPrimitive>,
+    ) -> Result<BlockWithReceipts<FeltPrimitive>, ProviderError> {
+        self.send_request(
+            JsonRpcMethod::GetBlockWithReceipts,
             GetBlockWithTxsParams { block_id },
         )
         .await
@@ -632,6 +649,12 @@ impl<'de> Deserialize<'de> for JsonRpcRequest {
             JsonRpcMethod::GetBlockWithTxs => JsonRpcRequestData::GetBlockWithTxs(
                 serde_json::from_value::<GetBlockWithTxsParams<FeltPrimitive>>(raw_request.params)
                     .map_err(error_mapper)?,
+            ),
+            JsonRpcMethod::GetBlockWithReceipts => JsonRpcRequestData::GetBlockWithReceipts(
+                serde_json::from_value::<GetBlockWithReceiptsParams<FeltPrimitive>>(
+                    raw_request.params,
+                )
+                .map_err(error_mapper)?,
             ),
             JsonRpcMethod::GetStateUpdate => JsonRpcRequestData::GetStateUpdate(
                 serde_json::from_value::<GetStateUpdateParams<FeltPrimitive>>(raw_request.params)
