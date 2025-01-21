@@ -91,10 +91,7 @@ impl RunnableTrait for TestCase {
         )
         .await?;
 
-        let block_with_receipts: Result<
-            starknet_types_rpc::BlockWithReceipts<Felt>,
-            crate::utils::v7::providers::provider::ProviderError,
-        > = test_input
+        let block_with_receipts = test_input
             .random_paymaster_account
             .provider()
             .get_block_with_receipts(BlockId::Tag(BlockTag::Latest))
@@ -218,7 +215,7 @@ impl RunnableTrait for TestCase {
             TxnReceipt::Invoke(deploy_receipt) => deploy_receipt,
             _ => {
                 return Err(OpenRpcTestGenError::UnexpectedTxnType(
-                    "Expected Deploy Transaction Receipt.".to_string(),
+                    "Expected Deploy Receipt.".to_string(),
                 ));
             }
         };

@@ -1,5 +1,6 @@
 use crypto_utils::curve::signer::compute_hash_on_elements;
 use starknet_types_core::felt::Felt;
+use starknet_types_rpc::FeeEstimate;
 
 use crate::utils::v7::{
     accounts::{
@@ -70,6 +71,35 @@ pub async fn get_deployment_result(
 }
 
 #[allow(clippy::too_many_arguments)]
+pub async fn estimate_fee_get_deployment_result(
+    provider: &JsonRpcClient<HttpTransport>,
+    account_type: AccountType,
+    class_hash: Felt,
+    signing_key: SigningKey,
+    salt: Felt,
+    chain_id: Felt,
+    max_fee: Option<Felt>,
+    wait_config: WaitForTx,
+    version: DeployAccountVersion,
+) -> Result<FeeEstimate<Felt>, CreationError> {
+    match account_type {
+        AccountType::Oz => {
+            estimate_fee_deploy_oz_account(
+                provider,
+                class_hash,
+                signing_key,
+                salt,
+                chain_id,
+                max_fee,
+                wait_config,
+                version,
+            )
+            .await
+        }
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
 async fn deploy_oz_account(
     provider: &JsonRpcClient<HttpTransport>,
     class_hash: Felt,
@@ -90,6 +120,38 @@ async fn deploy_oz_account(
     .unwrap();
 
     deploy_account(
+        factory,
+        provider,
+        salt,
+        max_fee,
+        wait_config,
+        class_hash,
+        version,
+    )
+    .await
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn estimate_fee_deploy_oz_account(
+    provider: &JsonRpcClient<HttpTransport>,
+    class_hash: Felt,
+    signing_key: SigningKey,
+    salt: Felt,
+    chain_id: Felt,
+    max_fee: Option<Felt>,
+    wait_config: WaitForTx,
+    version: DeployAccountVersion,
+) -> Result<FeeEstimate<Felt>, CreationError> {
+    let factory = OpenZeppelinAccountFactory::new(
+        class_hash,
+        chain_id,
+        LocalWallet::from_signing_key(signing_key),
+        provider,
+    )
+    .await
+    .unwrap();
+
+    estimate_fee_deploy_account(
         factory,
         provider,
         salt,
@@ -142,6 +204,51 @@ where
             };
             let result = deployment.send().await?;
             Ok(result.transaction_hash)
+        }
+    }
+}
+
+#[allow(unused_variables)]
+async fn estimate_fee_deploy_account<T>(
+    account_factory: T,
+    provider: &JsonRpcClient<HttpTransport>,
+    salt: Felt,
+    max_fee: Option<Felt>,
+    wait_config: WaitForTx,
+    class_hash: Felt,
+    version: DeployAccountVersion,
+) -> Result<FeeEstimate<Felt>, CreationError>
+where
+    T: AccountFactory + Sync,
+{
+    match version {
+        DeployAccountVersion::V1 => {
+            let deployment: crate::utils::v7::accounts::factory::AccountDeploymentV1<'_, T> =
+                account_factory.deploy_v1(salt);
+            let deploy_max_fee = if let Some(max_fee) = max_fee {
+                max_fee
+            } else {
+                match deployment.estimate_fee().await {
+                    Ok(max_fee) => Felt::from_dec_str(&max_fee.overall_fee.to_string())?,
+                    Err(error) => return Err(CreationError::RpcError(error.to_string())),
+                }
+            };
+            let result = deployment.estimate_fee().await?;
+            Ok(result)
+        }
+        DeployAccountVersion::V3 => {
+            let deployment: crate::utils::v7::accounts::factory::AccountDeploymentV3<'_, T> =
+                account_factory.deploy_v3(salt);
+            let deploy_max_fee = if let Some(max_fee) = max_fee {
+                max_fee
+            } else {
+                match deployment.estimate_fee().await {
+                    Ok(max_fee) => Felt::from_dec_str(&max_fee.overall_fee.to_string())?,
+                    Err(error) => return Err(CreationError::RpcError(error.to_string())),
+                }
+            };
+            let result = deployment.estimate_fee().await?;
+            Ok(result)
         }
     }
 }

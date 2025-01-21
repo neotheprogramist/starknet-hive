@@ -48,6 +48,7 @@ pub mod test_get_block_number;
 pub mod test_get_block_txn_count;
 pub mod test_get_block_with_receipts_declare;
 pub mod test_get_block_with_receipts_deploy;
+pub mod test_get_block_with_receipts_deploy_account;
 pub mod test_get_block_with_receipts_invoke;
 pub mod test_get_block_with_tx_hashes;
 pub mod test_get_block_with_txs;
