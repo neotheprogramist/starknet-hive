@@ -26,6 +26,7 @@ impl RunnableTrait for TestCase {
 
     async fn run(test_input: &Self::Input) -> Result<Self, OpenRpcTestGenError> {
         let account = test_input.random_paymaster_account.random_accounts()?;
+        let acc_class_hash = test_input.account_class_hash;
 
         let nonce = account
             .provider()
@@ -83,6 +84,12 @@ impl RunnableTrait for TestCase {
             OpenRpcTestGenError::Other("State diff is missing in invoke trace".to_string())
         })?;
 
+        let validate_invocation = declare_trace.validate_invocation.ok_or_else(|| {
+            OpenRpcTestGenError::Other(
+                "Validate invocation is missing in deploy account trace".to_string(),
+            )
+        })?;
+
         let state_diff_nonce = state_diff
             .nonces
             .first()
@@ -92,6 +99,7 @@ impl RunnableTrait for TestCase {
             })?;
 
         let transfer_selector = get_selector_from_name("transfer")?;
+        let validate_declare_selector = get_selector_from_name("__validate_declare__")?;
 
         // caller address
         let account_address = account.address();
@@ -200,6 +208,42 @@ impl RunnableTrait for TestCase {
             format!(
                 "Class hash mismatch: expected {:?}, but found {:?}",
                 compiled_class_hash, state_diff_compiled_class_hash
+            )
+        );
+
+        // Validate the contract address in validate_invocation
+        assert_result!(
+            validate_invocation.function_call.contract_address == account_address,
+            format!(
+                "Account address mismatch in validate invocation: expected {:?}, but found {:?}",
+                account_address, validate_invocation.function_call.contract_address
+            )
+        );
+
+        // Validate the entry point selector in validate_invocation for validate_deploy
+        assert_result!(
+            validate_invocation.function_call.entry_point_selector == validate_declare_selector,
+            format!(
+                "Entry point selector mismatch in validate invocation: expected {:?}, but found {:?}",
+                validate_declare_selector, validate_invocation.function_call.entry_point_selector
+            )
+        );
+
+        // Validate the class hash in validate_invocation
+        assert_result!(
+            validate_invocation.class_hash == acc_class_hash,
+            format!(
+                "Class hash mismatch in validate invocation: expected {:?}, but found {:?}",
+                acc_class_hash, validate_invocation.class_hash
+            )
+        );
+
+        // Validate the entry point type in the validate_invocation is EXTERNAL
+        assert_result!(
+            validate_invocation.entry_point_type == entry_point_type_external,
+            format!(
+                "Entry point type mismatch in validate invocation: expected {:?}, but found {:?}",
+                entry_point_type_external, validate_invocation.entry_point_type
             )
         );
 
