@@ -293,7 +293,7 @@ where
         }
     }
 }
-
+#[allow(clippy::too_many_arguments)]
 #[allow(unused_variables)]
 async fn simulate_deployment<T>(
     account_factory: T,
@@ -323,6 +323,7 @@ where
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 #[allow(unused_variables)]
 async fn estimate_fee_deployment<T>(
     account_factory: T,
