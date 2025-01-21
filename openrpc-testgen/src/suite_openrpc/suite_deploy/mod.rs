@@ -36,6 +36,7 @@ pub struct TestSuiteDeploy {
     pub random_paymaster_account: RandomSingleOwnerAccount,
     pub random_executable_account: RandomSingleOwnerAccount,
     pub declaration_result: ClassAndTxnHash<Felt>,
+    pub account_class_hash: Felt,
 }
 
 impl SetupableTrait for TestSuiteDeploy {
@@ -176,6 +177,7 @@ impl SetupableTrait for TestSuiteDeploy {
             random_paymaster_account: setup_input.random_paymaster_account.clone(),
             random_executable_account: setup_input.random_executable_account.clone(),
             declaration_result,
+            account_class_hash: setup_input.account_class_hash,
         })
     }
 }
