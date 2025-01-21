@@ -20,14 +20,13 @@ use starknet_types_rpc::{
     BlockId, BlockStatus, BlockTag, DaMode, DeclareTxn, InvokeTxn, PriceUnit,
     TransactionAndReceipt, Txn, TxnFinalityStatus, TxnReceipt,
 };
-use t9n::txn_validation::declare::verify_declare_v3_signature;
 
 const STRK_GAS_PRICE: Felt = Felt::from_hex_unchecked("0xa");
 const STRK_BLOB_GAS_PRICE: Felt = Felt::from_hex_unchecked("0x14");
 const GAS_PRICE: Felt = Felt::from_hex_unchecked("0x1e");
 const BLOB_GAS_PRICE: Felt = Felt::from_hex_unchecked("0x28");
-const DECLARE_TXN_GAS: u64 = 48000;
-const DECLARE_TXN_GAS_PRICE: u128 = 17;
+const DEPLOY_TXN_GAS: u64 = 706;
+const DEPLOY_TXN_GAS_PRICE: u128 = 15;
 const STRK_ADDRESS: Felt =
     Felt::from_hex_unchecked("0x4718F5A0FC34CC1AF16A1CDEE98FFB20C31F5CD61D6AB07201858F4287C938D");
 const UDC_ADDRESS: Felt =
@@ -70,12 +69,19 @@ impl RunnableTrait for TestCase {
         let mut rng = StdRng::from_entropy();
         rng.fill_bytes(&mut salt_buffer[1..]);
         let salt = Felt::from_bytes_be(&salt_buffer);
-        let unique = false;
+        let unique = true;
         let constructor_calldata = vec![];
-
         let sender_nonce = sender.get_nonce().await?;
+
+        let estimate_fee = factory
+            .deploy_v3(constructor_calldata.clone(), salt, unique)
+            .estimate_fee()
+            .await?;
+
         let deploy_result = factory
-            .deploy_v3(constructor_calldata, salt, unique)
+            .deploy_v3(constructor_calldata.clone(), salt, unique)
+            .gas(DEPLOY_TXN_GAS)
+            .gas_price(DEPLOY_TXN_GAS_PRICE)
             .send()
             .await?;
 
@@ -128,78 +134,80 @@ impl RunnableTrait for TestCase {
 
         let block_with_receipts = block_with_receipts?;
 
-        // assert_result!(
-        //     block_with_receipts.transactions.len() == 1,
-        //     format!(
-        //         "Expected transactions amount to be {}, got {}",
-        //         1,
-        //         block_with_receipts.transactions.len()
-        //     )
-        // );
+        println!("block_with_receipts: {:#?}", block_with_receipts);
 
-        // assert_result!(
-        //     block_with_receipts.status == BlockStatus::AcceptedOnL2,
-        //     format!(
-        //         "Mismatch expected: {:?}, but got: {:?}",
-        //         BlockStatus::AcceptedOnL2,
-        //         block_with_receipts.status
-        //     )
-        // );
+        assert_result!(
+            block_with_receipts.transactions.len() == 1,
+            format!(
+                "Expected transactions amount to be {}, got {}",
+                1,
+                block_with_receipts.transactions.len()
+            )
+        );
 
-        // let block_hash_and_number = test_input
-        //     .random_paymaster_account
-        //     .provider()
-        //     .block_hash_and_number()
-        //     .await?;
+        assert_result!(
+            block_with_receipts.status == BlockStatus::AcceptedOnL2,
+            format!(
+                "Mismatch expected: {:?}, but got: {:?}",
+                BlockStatus::AcceptedOnL2,
+                block_with_receipts.status
+            )
+        );
 
-        // let block_header = block_with_receipts.block_header;
-        // assert_result!(
-        //     block_header.block_hash == block_hash_and_number.block_hash,
-        //     format!(
-        //         "Mismatch block hash: {} != {}",
-        //         block_header.block_hash, block_hash_and_number.block_hash
-        //     )
-        // );
+        let block_hash_and_number = test_input
+            .random_paymaster_account
+            .provider()
+            .block_hash_and_number()
+            .await?;
 
-        // assert_result!(
-        //     block_header.block_number == block_hash_and_number.block_number,
-        //     format!(
-        //         "Mismatch block number: {} != {}",
-        //         block_header.block_number, block_hash_and_number.block_number
-        //     )
-        // );
+        let block_header = block_with_receipts.block_header;
+        assert_result!(
+            block_header.block_hash == block_hash_and_number.block_hash,
+            format!(
+                "Mismatch block hash: {} != {}",
+                block_header.block_hash, block_hash_and_number.block_hash
+            )
+        );
 
-        // assert_result!(
-        //     block_header.l1_data_gas_price.price_in_fri == STRK_BLOB_GAS_PRICE,
-        //     format!(
-        //         "Mismatch l1 data gas price: {} != {}",
-        //         block_header.l1_data_gas_price.price_in_fri, STRK_BLOB_GAS_PRICE
-        //     )
-        // );
+        assert_result!(
+            block_header.block_number == block_hash_and_number.block_number,
+            format!(
+                "Mismatch block number: {} != {}",
+                block_header.block_number, block_hash_and_number.block_number
+            )
+        );
 
-        // assert_result!(
-        //     block_header.l1_data_gas_price.price_in_wei == BLOB_GAS_PRICE,
-        //     format!(
-        //         "Mismatch gas price: {} != {}",
-        //         block_header.l1_data_gas_price.price_in_wei, BLOB_GAS_PRICE
-        //     )
-        // );
+        assert_result!(
+            block_header.l1_data_gas_price.price_in_fri == STRK_BLOB_GAS_PRICE,
+            format!(
+                "Mismatch l1 data gas price: {} != {}",
+                block_header.l1_data_gas_price.price_in_fri, STRK_BLOB_GAS_PRICE
+            )
+        );
 
-        // assert_result!(
-        //     block_header.l1_gas_price.price_in_fri == STRK_GAS_PRICE,
-        //     format!(
-        //         "Mismatch l1 gas price: {} != {}",
-        //         block_header.l1_gas_price.price_in_fri, STRK_GAS_PRICE
-        //     )
-        // );
+        assert_result!(
+            block_header.l1_data_gas_price.price_in_wei == BLOB_GAS_PRICE,
+            format!(
+                "Mismatch gas price: {} != {}",
+                block_header.l1_data_gas_price.price_in_wei, BLOB_GAS_PRICE
+            )
+        );
 
-        // assert_result!(
-        //     block_header.l1_gas_price.price_in_wei == GAS_PRICE,
-        //     format!(
-        //         "Mismatch gas price: {} != {}",
-        //         block_header.l1_gas_price.price_in_wei, GAS_PRICE
-        //     )
-        // );
+        assert_result!(
+            block_header.l1_gas_price.price_in_fri == STRK_GAS_PRICE,
+            format!(
+                "Mismatch l1 gas price: {} != {}",
+                block_header.l1_gas_price.price_in_fri, STRK_GAS_PRICE
+            )
+        );
+
+        assert_result!(
+            block_header.l1_gas_price.price_in_wei == GAS_PRICE,
+            format!(
+                "Mismatch gas price: {} != {}",
+                block_header.l1_gas_price.price_in_wei, GAS_PRICE
+            )
+        );
 
         let TransactionAndReceipt {
             transaction,
@@ -208,8 +216,17 @@ impl RunnableTrait for TestCase {
             OpenRpcTestGenError::Other("Transaction not found in block with receipts".to_string())
         })?;
 
+        let deploy_receipt = match receipt {
+            TxnReceipt::Invoke(deploy_receipt) => deploy_receipt,
+            _ => {
+                return Err(OpenRpcTestGenError::UnexpectedTxnType(
+                    "Expected Deploy Transaction Receipt.".to_string(),
+                ));
+            }
+        };
+
         let deploy_tx = match transaction {
-            Txn::Invoke(declare_tx) => match declare_tx {
+            Txn::Invoke(deploy_tx) => match deploy_tx {
                 InvokeTxn::V3(v3_tx) => v3_tx,
                 _ => {
                     return Err(OpenRpcTestGenError::UnexpectedTxnType(
@@ -319,211 +336,312 @@ impl RunnableTrait for TestCase {
             .get(7)
             .ok_or_else(|| OpenRpcTestGenError::Other("Missing calldata".to_string()))?;
 
+        let constructor_calldata_len_felt =
+            Felt::from_dec_str(&constructor_calldata.len().to_string())?;
+
         assert_result!(
-            deploy_calldata_constructor_calldata_length == Felt::ZERO,
+            deploy_calldata_constructor_calldata_length == constructor_calldata_len_felt,
             format!(
-                "Expected calldata to be {}, got {}",
-                Felt::ZERO,
-                deploy_calldata_constructor_calldata_length
+                "Expected calldata length to be {}, got {}",
+                constructor_calldata_len_felt, deploy_calldata_constructor_calldata_length
             )
         );
 
-        // let deploy_receipt = match receipt {
-        //     TxnReceipt::Invoke(declare_receipt) => declare_receipt,
-        //     _ => {
-        //         return Err(OpenRpcTestGenError::UnexpectedTxnType(
-        //             "Expected Invoke Transaction Receipt.".to_string(),
-        //         ));
-        //     }
-        // };
+        assert_result!(
+            deploy_tx.fee_data_availability_mode == DaMode::L1,
+            format!(
+                "Expected fee data availability_mode to be {:?}, got {:?}",
+                DaMode::L1,
+                deploy_tx.fee_data_availability_mode
+            )
+        );
 
-        // assert_result!(
-        //     declare_tx.class_hash == class_and_tx_hash.class_hash,
-        //     format!(
-        //         "Expected class hash to be {:?}, got {:?}",
-        //         class_and_tx_hash.class_hash, declare_tx.class_hash
-        //     )
-        // );
+        assert_result!(
+            deploy_tx.nonce == sender_nonce,
+            format!(
+                "Expected nonce to be {:?}, got {:?}",
+                sender_nonce, deploy_tx.nonce
+            )
+        );
 
-        // assert_result!(
-        //     declare_tx.compiled_class_hash == compiled_class_hash,
-        //     format!(
-        //         "Expected compiled class hash to be {:?}, got {:?}",
-        //         compiled_class_hash, declare_tx.compiled_class_hash
-        //     )
-        // );
+        assert_result!(
+            deploy_tx.nonce_data_availability_mode == DaMode::L1,
+            format!(
+                "Expected nonce data avability mode to be {:?}, got {:?}",
+                DaMode::L1,
+                deploy_tx.nonce_data_availability_mode
+            )
+        );
 
-        // assert_result!(
-        //     declare_tx.fee_data_availability_mode == DaMode::L1,
-        //     format!(
-        //         "Expected fee data availability_mode to be {:?}, got {:?}",
-        //         DaMode::L1,
-        //         declare_tx.fee_data_availability_mode
-        //     )
-        // );
+        assert_result!(
+            deploy_tx.paymaster_data.is_empty(),
+            "Expected paymaster data to be empty"
+        );
 
-        // assert_result!(
-        //     declare_tx.nonce == sender_nonce,
-        //     format!(
-        //         "Expected nonce to be {:?}, got {:?}",
-        //         sender_nonce, declare_tx.nonce
-        //     )
-        // );
+        let sender_address = sender.address();
+        assert_result!(
+            deploy_tx.sender_address == sender_address,
+            format!(
+                "Expected sender address to be {:?}, got {:?}",
+                sender_address, deploy_tx.sender_address
+            )
+        );
 
-        // assert_result!(
-        //     declare_tx.nonce_data_availability_mode == DaMode::L1,
-        //     format!(
-        //         "Expected nonce data avability mode to be {:?}, got {:?}",
-        //         DaMode::L1,
-        //         declare_tx.nonce_data_availability_mode
-        //     )
-        // );
-
-        // assert_result!(
-        //     declare_tx.paymaster_data.is_empty(),
-        //     "Expected paymaster data to be empty"
-        // );
-
-        // let sender_address = sender.address();
-        // assert_result!(
-        //     declare_tx.sender_address == sender_address,
-        //     format!(
-        //         "Expected sender address to be {:?}, got {:?}",
-        //         sender_address, declare_tx.sender_address
-        //     )
-        // );
-
+        // TODO: SIGNATURES
         // assert_result!(
         //     valid_signature,
         //     format!("Invalid signature, checked by t9n.",)
         // );
 
         // assert_result!(
-        //     declare_tx.signature == signature,
+        //     deploy_tx.signature == signature,
         //     format!(
         //         "Expected signature: {:?}, got {:?}",
-        //         signature, declare_tx.signature
+        //         signature, deploy_tx.signature
         //     )
         // );
 
-        // assert_result!(
-        //     declare_receipt.common_receipt_properties.transaction_hash == declare_tx_hash,
-        //     format!(
-        //         "Expected declare transaction hash: {:?}, got {:?}",
-        //         declare_tx_hash, declare_receipt.common_receipt_properties.transaction_hash
-        //     )
-        // );
+        assert_result!(
+            deploy_receipt.common_receipt_properties.transaction_hash
+                == deploy_result.transaction_hash,
+            format!(
+                "Expected declare transaction hash: {:?}, got {:?}",
+                deploy_result.transaction_hash,
+                deploy_receipt.common_receipt_properties.transaction_hash
+            )
+        );
 
-        // let expected_tip = Felt::ZERO.to_hex_string();
-        // assert_result!(
-        //     declare_tx.tip == expected_tip,
-        //     format!(
-        //         "Expected tip to be {:?}, got {:?}",
-        //         expected_tip, declare_tx.tip
-        //     )
-        // );
-        // let declare_txn_gas_hex = Felt::from_dec_str(&DECLARE_TXN_GAS.to_string())?.to_hex_string();
-        // assert_result!(
-        //     declare_tx.resource_bounds.l1_gas.max_amount == declare_txn_gas_hex,
-        //     format!(
-        //         "Expected l1 gas max amount to be {:?}, got {:?}",
-        //         declare_txn_gas_hex, declare_tx.resource_bounds.l1_gas.max_amount
-        //     )
-        // );
+        let expected_tip = Felt::ZERO;
+        assert_result!(
+            deploy_tx.tip == expected_tip,
+            format!(
+                "Expected tip to be {:?}, got {:?}",
+                expected_tip, deploy_tx.tip
+            )
+        );
 
-        // let declare_txn_gas_price_hex =
-        //     Felt::from_dec_str(&DECLARE_TXN_GAS_PRICE.to_string())?.to_hex_string();
-        // assert_result!(
-        //     declare_tx.resource_bounds.l1_gas.max_price_per_unit == declare_txn_gas_price_hex,
-        //     format!(
-        //         "Expected l1 gas max price per unit
-        //          to be {:?}, got {:?}",
-        //         declare_txn_gas_price_hex, declare_tx.resource_bounds.l1_gas.max_price_per_unit
-        //     )
-        // );
+        println!("deploy_receipt: {:#?}", deploy_receipt);
+        let deploy_txn_gas_hex = Felt::from_dec_str(&DEPLOY_TXN_GAS.to_string())?.to_hex_string();
+        assert_result!(
+            deploy_tx.resource_bounds.l1_gas.max_amount == deploy_txn_gas_hex,
+            format!(
+                "Expected l1 gas max amount to be {:?}, got {:?}",
+                deploy_txn_gas_hex, deploy_tx.resource_bounds.l1_gas.max_amount
+            )
+        );
 
-        // let expected_l2_gas_max_amount = Felt::ZERO.to_hex_string();
-        // assert_result!(
-        //     declare_tx.resource_bounds.l2_gas.max_amount == expected_l2_gas_max_amount,
-        //     format!(
-        //         "Expected l2 gas max amount to be {:?}, got {:?}",
-        //         expected_l2_gas_max_amount, declare_tx.resource_bounds.l2_gas.max_amount
-        //     )
-        // );
+        let deploy_txn_gas_price_hex =
+            Felt::from_dec_str(&DEPLOY_TXN_GAS_PRICE.to_string())?.to_hex_string();
+        assert_result!(
+            deploy_tx.resource_bounds.l1_gas.max_price_per_unit == deploy_txn_gas_price_hex,
+            format!(
+                "Expected l1 gas max price per unit
+                 to be {:?}, got {:?}",
+                deploy_txn_gas_price_hex, deploy_tx.resource_bounds.l1_gas.max_price_per_unit
+            )
+        );
 
-        // let expected_l2_gas_max_price_per_unit = Felt::ZERO.to_hex_string();
-        // assert_result!(
-        //     declare_tx.resource_bounds.l2_gas.max_price_per_unit
-        //         == expected_l2_gas_max_price_per_unit,
-        //     format!(
-        //         "Expected l2 gas max price per unit
-        //          to be {:?}, got {:?}",
-        //         expected_l2_gas_max_price_per_unit,
-        //         declare_tx.resource_bounds.l2_gas.max_price_per_unit
-        //     )
-        // );
+        let expected_l2_gas_max_amount = Felt::ZERO.to_hex_string();
+        assert_result!(
+            deploy_tx.resource_bounds.l2_gas.max_amount == expected_l2_gas_max_amount,
+            format!(
+                "Expected l2 gas max amount to be {:?}, got {:?}",
+                expected_l2_gas_max_amount, deploy_tx.resource_bounds.l2_gas.max_amount
+            )
+        );
+
+        let expected_l2_gas_max_price_per_unit = Felt::ZERO.to_hex_string();
+        assert_result!(
+            deploy_tx.resource_bounds.l2_gas.max_price_per_unit
+                == expected_l2_gas_max_price_per_unit,
+            format!(
+                "Expected l2 gas max price per unit
+                 to be {:?}, got {:?}",
+                expected_l2_gas_max_price_per_unit,
+                deploy_tx.resource_bounds.l2_gas.max_price_per_unit
+            )
+        );
 
         // // Declare receipt
-        // let actual_fee = declare_receipt.common_receipt_properties.actual_fee.clone();
+        let actual_fee = deploy_receipt.common_receipt_properties.actual_fee.clone();
 
-        // assert_result!(
-        //     actual_fee.amount == estimate_fee.overall_fee,
-        //     format!(
-        //         "Expected overall fee to be {:?}, got {:?}",
-        //         estimate_fee.overall_fee, actual_fee.unit
-        //     )
-        // );
+        assert_result!(
+            actual_fee.amount == estimate_fee.overall_fee,
+            format!(
+                "Expected overall fee to be {:?}, got {:?}",
+                estimate_fee.overall_fee, actual_fee.unit
+            )
+        );
 
-        // assert_result!(
-        //     actual_fee.unit == PriceUnit::Fri,
-        //     format!(
-        //         "Expected price unit to be {:?}, got {:?}",
-        //         PriceUnit::Fri,
-        //         actual_fee.unit
-        //     )
-        // );
+        assert_result!(
+            actual_fee.unit == PriceUnit::Fri,
+            format!(
+                "Expected price unit to be {:?}, got {:?}",
+                PriceUnit::Fri,
+                actual_fee.unit
+            )
+        );
 
-        // let event = declare_receipt
-        //     .common_receipt_properties
-        //     .events
-        //     .first()
-        //     .ok_or_else(|| OpenRpcTestGenError::Other("Event missing".to_string()))?;
+        let events = deploy_receipt.common_receipt_properties.events.clone();
 
-        // assert_result!(
-        //     event.from_address == STRK_ADDRESS,
-        //     format!(
-        //         "Expected event from address to be {:?}, got {:?}",
-        //         STRK_ADDRESS, event.from_address
-        //     )
-        // );
+        assert_result!(
+            events.len() == 2,
+            format!("Expected 2 events, got {:#?}", events.len())
+        );
 
-        // let event_data_first = *event
-        //     .data
-        //     .first()
-        //     .ok_or_else(|| OpenRpcTestGenError::Other("Missing first event data".to_string()))?;
+        let first_event = deploy_receipt
+            .common_receipt_properties
+            .events
+            .first()
+            .ok_or_else(|| OpenRpcTestGenError::Other("Event missing".to_string()))?;
 
-        // assert_result!(
-        //     event_data_first == estimate_fee.overall_fee,
-        //     format!(
-        //         "Expected first event data to be {:?}, got {:?}",
-        //         estimate_fee.overall_fee, event_data_first
-        //     )
-        // );
+        assert_result!(
+            first_event.from_address == UDC_ADDRESS,
+            format!(
+                "Expected event from address to be {:?}, got {:?}",
+                UDC_ADDRESS, first_event.from_address
+            )
+        );
 
-        // let event_data_second = *event
-        //     .data
-        //     .get(1)
-        //     .ok_or_else(|| OpenRpcTestGenError::Other("Missing first event data".to_string()))?;
+        println!(
+            "deployed_contract_address: {:#?}",
+            deployed_contract_address
+        );
 
-        // let expected_event_second_data = Felt::ZERO;
+        println!("sender_address: {:#?}", sender_address);
+        println!("unique: {:#?}", unique);
+        println!("classhash: {:#?}", declare_result.class_hash);
+        println!("salt {:#?}", salt);
 
-        // assert_result!(
-        //     event_data_second == expected_event_second_data,
-        //     format!(
-        //         "Expected second event data to be {:?}, got {:?}",
-        //         expected_event_second_data, event_data_second
-        //     )
-        // );
+        let first_event_event_data_first = *first_event
+            .data
+            .first()
+            .ok_or_else(|| OpenRpcTestGenError::Other("Missing first event data".to_string()))?;
+
+        assert_result!(
+            first_event_event_data_first == deployed_contract_address,
+            format!(
+                "Expected first event data to be {:?}, got {:?}",
+                deployed_contract_address, first_event_event_data_first
+            )
+        );
+
+        let first_event_event_data_second = *first_event
+            .data
+            .get(1)
+            .ok_or_else(|| OpenRpcTestGenError::Other("Missing secpnd event data".to_string()))?;
+
+        assert_result!(
+            first_event_event_data_second == sender_address,
+            format!(
+                "Expected second event data to be {:?}, got {:?}",
+                sender_address, first_event_event_data_second
+            )
+        );
+
+        let first_event_event_data_third = *first_event
+            .data
+            .get(2)
+            .ok_or_else(|| OpenRpcTestGenError::Other("Missing third event data".to_string()))?;
+
+        assert_result!(
+            first_event_event_data_third == unique_hex,
+            format!(
+                "Expected third event data to be {:?}, got {:?}",
+                unique_hex, first_event_event_data_third
+            )
+        );
+
+        let first_event_event_data_fourth = *first_event
+            .data
+            .get(3)
+            .ok_or_else(|| OpenRpcTestGenError::Other("Missing fourth event data".to_string()))?;
+
+        assert_result!(
+            first_event_event_data_fourth == declare_result.class_hash,
+            format!(
+                "Expected fourth event data to be {:?}, got {:?}",
+                declare_result.class_hash, first_event_event_data_fourth
+            )
+        );
+
+        let first_event_event_data_fifth = *first_event
+            .data
+            .get(4)
+            .ok_or_else(|| OpenRpcTestGenError::Other("Missing fifth event data".to_string()))?;
+
+        assert_result!(
+            first_event_event_data_fifth == constructor_calldata_len_felt,
+            format!(
+                "Expected fifth event data to be {:?}, got {:?}",
+                constructor_calldata_len_felt, first_event_event_data_fifth
+            )
+        );
+
+        let first_event_event_data_sixth = *first_event
+            .data
+            .get(5)
+            .ok_or_else(|| OpenRpcTestGenError::Other("Missing sixth event data".to_string()))?;
+
+        assert_result!(
+            first_event_event_data_sixth == salt,
+            format!(
+                "Expected sixth event data to be {:?}, got {:?}",
+                salt, first_event_event_data_sixth
+            )
+        );
+
+        let first_event_keys_first = *first_event
+            .keys
+            .first()
+            .ok_or_else(|| OpenRpcTestGenError::Other("Missing first event key".to_string()))?;
+        let keccak_contract_deployed = starknet_keccak("ContractDeployed".as_bytes());
+        println!("keccak_contract_deployed: {:#?}", keccak_contract_deployed);
+        println!("first_event_keys_first: {:#?}", first_event_keys_first);
+
+        assert_result!(
+            first_event_keys_first == keccak_contract_deployed,
+            format!(
+                "Invalid keccak in event keys, expected {:?}, got {:?}",
+                keccak_contract_deployed, first_event_keys_first
+            )
+        );
+
+        let first_event = deploy_receipt
+        .common_receipt_properties
+        .events
+        .first()
+        .ok_or_else(|| OpenRpcTestGenError::Other("Event missing".to_string()))?;
+
+    assert_result!(
+        first_event.from_address == UDC_ADDRESS,
+        format!(
+            "Expected event from address to be {:?}, got {:?}",
+            UDC_ADDRESS, first_event.from_address
+        )
+    );
+
+    println!(
+        "deployed_contract_address: {:#?}",
+        deployed_contract_address
+    );
+
+    println!("sender_address: {:#?}", sender_address);
+    println!("unique: {:#?}", unique);
+    println!("classhash: {:#?}", declare_result.class_hash);
+    println!("salt {:#?}", salt);
+
+    let first_event_event_data_first = *first_event
+        .data
+        .first()
+        .ok_or_else(|| OpenRpcTestGenError::Other("Missing first event data".to_string()))?;
+
+    assert_result!(
+        first_event_event_data_first == deployed_contract_address,
+        format!(
+            "Expected first event data to be {:?}, got {:?}",
+            deployed_contract_address, first_event_event_data_first
+        )
 
         // let event_keys_first = *event
         //     .keys
