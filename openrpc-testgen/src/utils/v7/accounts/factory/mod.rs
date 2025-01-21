@@ -535,6 +535,21 @@ where
         self.estimate_fee_with_nonce(nonce).await
     }
 
+    pub async fn estimate_fee_skip_signature(
+        &self,
+    ) -> Result<FeeEstimate<Felt>, AccountFactoryError<F::SignError>> {
+        // Resolves nonce
+        let nonce = match self.nonce {
+            Some(value) => value,
+            None => self
+                .fetch_nonce()
+                .await
+                .map_err(AccountFactoryError::Provider)?,
+        };
+
+        self.estimate_fee_with_nonce_skip_signature(nonce).await
+    }
+
     pub async fn simulate(
         &self,
         skip_validate: bool,
@@ -691,7 +706,7 @@ where
                 BroadcastedTxn::DeployAccount(BroadcastedDeployAccountTxn::V3(deploy)),
                 if skip_signature {
                     // Validation would fail since real signature was not requested
-                    vec![]
+                    vec!["SKIP_VALIDATE".to_string()]
                 } else {
                     // With the correct signature in place, run validation for accurate results
                     vec![]
@@ -702,6 +717,42 @@ where
             .map_err(AccountFactoryError::Provider)
     }
 
+    async fn estimate_fee_with_nonce_skip_signature(
+        &self,
+        nonce: Felt,
+    ) -> Result<FeeEstimate<Felt>, AccountFactoryError<F::SignError>> {
+        let skip_signature = true;
+
+        let prepared = PreparedAccountDeploymentV3 {
+            factory: self.factory,
+            inner: RawAccountDeploymentV3 {
+                salt: self.salt,
+                nonce,
+                gas: 0,
+                gas_price: 0,
+            },
+        };
+        let deploy = prepared
+            .get_deploy_request(false, skip_signature)
+            .await
+            .map_err(AccountFactoryError::Signing)?;
+
+        self.factory
+            .provider()
+            .estimate_fee_single(
+                BroadcastedTxn::DeployAccount(BroadcastedDeployAccountTxn::V3(deploy)),
+                if skip_signature {
+                    // Validation would fail since real signature was not requested
+                    vec!["SKIP_VALIDATE".to_string()]
+                } else {
+                    // With the correct signature in place, run validation for accurate results
+                    vec![]
+                },
+                self.factory.block_id(),
+            )
+            .await
+            .map_err(AccountFactoryError::Provider)
+    }
     async fn simulate_with_nonce(
         &self,
         nonce: Felt,

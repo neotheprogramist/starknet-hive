@@ -342,6 +342,22 @@ where
         self.estimate_fee_with_nonce(nonce).await
     }
 
+    pub async fn estimate_fee_skip_signature(
+        &self,
+    ) -> Result<FeeEstimate<Felt>, AccountError<A::SignError>> {
+        // Resolves nonce
+        let nonce = match self.nonce {
+            Some(value) => value,
+            None => self
+                .account
+                .get_nonce()
+                .await
+                .map_err(AccountError::Provider)?,
+        };
+
+        self.estimate_fee_with_nonce_skip_signature(nonce).await
+    }
+
     pub async fn simulate(
         &self,
         skip_validate: bool,
@@ -500,9 +516,44 @@ where
                 BroadcastedTxn::Invoke(BroadcastedInvokeTxn::V3(invoke)),
                 if skip_signature {
                     // Validation would fail since real signature was not requested
+                    vec!["SKIP_VALIDATE".to_string()]
+                } else {
+                    // With the correct signature in place, run validation for accurate results
                     vec![]
-                    // vec![SimulationFlagForEstimateFee::SkipValidate]
-                    // vec![SimulationFlagForEstimateFee::SkipValidate]
+                },
+                self.account.block_id(),
+            )
+            .await
+            .map_err(AccountError::Provider)
+    }
+
+    async fn estimate_fee_with_nonce_skip_signature(
+        &self,
+        nonce: Felt,
+    ) -> Result<FeeEstimate<Felt>, AccountError<A::SignError>> {
+        let skip_signature = true;
+
+        let prepared = PreparedExecutionV3 {
+            account: self.account,
+            inner: RawExecutionV3 {
+                calls: self.calls.clone(),
+                nonce,
+                gas: 0,
+                gas_price: 0,
+            },
+        };
+        let invoke = prepared
+            .get_invoke_request(true, skip_signature)
+            .await
+            .map_err(AccountError::Signing)?;
+
+        self.account
+            .provider()
+            .estimate_fee_single(
+                BroadcastedTxn::Invoke(BroadcastedInvokeTxn::V3(invoke)),
+                if skip_signature {
+                    // Validation would fail since real signature was not requested
+                    vec!["SKIP_VALIDATE".to_string()]
                 } else {
                     // With the correct signature in place, run validation for accurate results
                     vec![]

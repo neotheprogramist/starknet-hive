@@ -341,6 +341,22 @@ where
         self.estimate_fee_with_nonce(nonce).await
     }
 
+    pub async fn estimate_fee_skip_signature(
+        &self,
+    ) -> Result<FeeEstimate<Felt>, AccountError<A::SignError>> {
+        // Resolves nonce
+        let nonce = match self.nonce {
+            Some(value) => value,
+            None => self
+                .account
+                .get_nonce()
+                .await
+                .map_err(AccountError::Provider)?,
+        };
+
+        self.estimate_fee_with_nonce_skip_signature(nonce).await
+    }
+
     pub async fn simulate(
         &self,
         skip_validate: bool,
@@ -498,7 +514,47 @@ where
                 BroadcastedTxn::Declare(BroadcastedDeclareTxn::V3(declare)),
                 if skip_signature {
                     // Validation would fail since real signature was not requested
+                    vec!["SKIP_VALIDATE".to_string()]
+                } else {
+                    // With the correct signature in place, run validation for accurate results
                     vec![]
+                },
+                self.account.block_id(),
+            )
+            .await;
+
+        match result {
+            Ok(fee_estimate) => Ok(fee_estimate),
+            Err(e) => Err(AccountError::Provider(e)),
+        }
+    }
+
+    async fn estimate_fee_with_nonce_skip_signature(
+        &self,
+        nonce: Felt,
+    ) -> Result<FeeEstimate<Felt>, AccountError<A::SignError>> {
+        let skip_signature = true;
+        let prepared = PreparedDeclarationV3 {
+            account: self.account,
+            inner: RawDeclarationV3 {
+                contract_class: self.contract_class.clone(),
+                compiled_class_hash: self.compiled_class_hash,
+                nonce,
+                gas: 0,
+                gas_price: 0,
+            },
+        };
+
+        let declare = prepared.get_declare_request(true, skip_signature).await?;
+
+        let result = self
+            .account
+            .provider()
+            .estimate_fee_single(
+                BroadcastedTxn::Declare(BroadcastedDeclareTxn::V3(declare)),
+                if skip_signature {
+                    // Validation would fail since real signature was not requested
+                    vec!["SKIP_VALIDATE".to_string()]
                 } else {
                     // With the correct signature in place, run validation for accurate results
                     vec![]
