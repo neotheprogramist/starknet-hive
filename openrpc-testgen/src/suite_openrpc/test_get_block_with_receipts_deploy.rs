@@ -17,8 +17,8 @@ use crate::{
 use rand::{rngs::StdRng, RngCore, SeedableRng};
 use starknet_types_core::felt::Felt;
 use starknet_types_rpc::{
-    BlockId, BlockStatus, BlockTag, DaMode, DeclareTxn, InvokeTxn, PriceUnit,
-    TransactionAndReceipt, Txn, TxnFinalityStatus, TxnReceipt,
+    BlockId, BlockStatus, BlockTag, DaMode, InvokeTxn, PriceUnit, TransactionAndReceipt, Txn,
+    TxnFinalityStatus, TxnReceipt,
 };
 
 const STRK_GAS_PRICE: Felt = Felt::from_hex_unchecked("0xa");
@@ -51,7 +51,7 @@ impl RunnableTrait for TestCase {
         .await?;
 
         let sender = test_input.random_paymaster_account.random_accounts()?;
-        let chain_id = sender.provider().chain_id().await?;
+        // let chain_id = sender.provider().chain_id().await?;
 
         let declare_result = sender
             .declare_v3(flattened_sierra_class, compiled_class_hash)
@@ -134,8 +134,6 @@ impl RunnableTrait for TestCase {
 
         let block_with_receipts = block_with_receipts?;
 
-        println!("block_with_receipts: {:#?}", block_with_receipts);
-
         assert_result!(
             block_with_receipts.transactions.len() == 1,
             format!(
@@ -148,7 +146,7 @@ impl RunnableTrait for TestCase {
         assert_result!(
             block_with_receipts.status == BlockStatus::AcceptedOnL2,
             format!(
-                "Mismatch expected: {:?}, but got: {:?}",
+                "Expected block status to be {:?}, but got {:?}.",
                 BlockStatus::AcceptedOnL2,
                 block_with_receipts.status
             )
@@ -164,7 +162,7 @@ impl RunnableTrait for TestCase {
         assert_result!(
             block_header.block_hash == block_hash_and_number.block_hash,
             format!(
-                "Mismatch block hash: {} != {}",
+                "Expected block hash to be {}, but got {}.",
                 block_header.block_hash, block_hash_and_number.block_hash
             )
         );
@@ -172,7 +170,7 @@ impl RunnableTrait for TestCase {
         assert_result!(
             block_header.block_number == block_hash_and_number.block_number,
             format!(
-                "Mismatch block number: {} != {}",
+                "Expected block number to be {}, but got {}.",
                 block_header.block_number, block_hash_and_number.block_number
             )
         );
@@ -180,7 +178,7 @@ impl RunnableTrait for TestCase {
         assert_result!(
             block_header.l1_data_gas_price.price_in_fri == STRK_BLOB_GAS_PRICE,
             format!(
-                "Mismatch l1 data gas price: {} != {}",
+                "Expected L1 data gas price in FRI to be {}, but got {}.",
                 block_header.l1_data_gas_price.price_in_fri, STRK_BLOB_GAS_PRICE
             )
         );
@@ -188,7 +186,7 @@ impl RunnableTrait for TestCase {
         assert_result!(
             block_header.l1_data_gas_price.price_in_wei == BLOB_GAS_PRICE,
             format!(
-                "Mismatch gas price: {} != {}",
+                "Expected L1 data gas price in WEI to be {}, but got {}.",
                 block_header.l1_data_gas_price.price_in_wei, BLOB_GAS_PRICE
             )
         );
@@ -196,7 +194,7 @@ impl RunnableTrait for TestCase {
         assert_result!(
             block_header.l1_gas_price.price_in_fri == STRK_GAS_PRICE,
             format!(
-                "Mismatch l1 gas price: {} != {}",
+                "Expected L1 gas price in FRI to be {}, but got {}.",
                 block_header.l1_gas_price.price_in_fri, STRK_GAS_PRICE
             )
         );
@@ -204,7 +202,7 @@ impl RunnableTrait for TestCase {
         assert_result!(
             block_header.l1_gas_price.price_in_wei == GAS_PRICE,
             format!(
-                "Mismatch gas price: {} != {}",
+                "Expected L1 gas price in WEI to be {}, but got {}.",
                 block_header.l1_gas_price.price_in_wei, GAS_PRICE
             )
         );
@@ -244,13 +242,16 @@ impl RunnableTrait for TestCase {
         // Deploy Txn
         assert_result!(
             deploy_tx.account_deployment_data.is_empty(),
-            "Expected account deployment data to be empty"
+            "Expected account deployment data to be empty, but it was not."
         );
 
         let deploy_calldata = deploy_tx.calldata.clone();
         assert_result!(
             deploy_calldata.len() == 8,
-            "Expected calldata length to be 8"
+            format!(
+                "Expected calldata length to be 8, but got {}.",
+                deploy_calldata.len()
+            )
         );
 
         let deploy_calldata_calls_amount = *deploy_calldata
@@ -260,7 +261,7 @@ impl RunnableTrait for TestCase {
         assert_result!(
             deploy_calldata_calls_amount == Felt::ONE,
             format!(
-                "Expected calldata[0] to be {}, got {}",
+                "Expected calldata calls amount to be {}, but got {}.",
                 Felt::ONE,
                 deploy_calldata_calls_amount
             )
@@ -273,7 +274,7 @@ impl RunnableTrait for TestCase {
         assert_result!(
             deploy_calldata_udc == UDC_ADDRESS,
             format!(
-                "Expected calldata to be {}, got {}",
+                "Expected UDC address in calldata to be {}, but got {}.",
                 UDC_ADDRESS, deploy_calldata_udc
             )
         );
@@ -286,7 +287,7 @@ impl RunnableTrait for TestCase {
         assert_result!(
             deploy_calldata_keccak == keccak_deploy_account,
             format!(
-                "Expected calldata to be {}, got {}",
+                "Expected keccak hash in calldata to be {}, but got {}.",
                 keccak_deploy_account, deploy_calldata_keccak
             )
         );
@@ -298,7 +299,7 @@ impl RunnableTrait for TestCase {
         assert_result!(
             deploy_calldata_class_hash == declare_result.class_hash,
             format!(
-                "Expected calldata to be {}, got {}",
+                "Expected class hash in calldata to be {}, but got {}.",
                 declare_result.class_hash, deploy_calldata_class_hash
             )
         );
@@ -310,7 +311,7 @@ impl RunnableTrait for TestCase {
         assert_result!(
             deploy_calldata_salt == salt,
             format!(
-                "Expected calldata to be {}, got {}",
+                "Expected salt in calldata to be {}, but got {}.",
                 salt, deploy_calldata_salt
             )
         );
@@ -327,7 +328,7 @@ impl RunnableTrait for TestCase {
         assert_result!(
             deploy_calldata_unique == unique_hex,
             format!(
-                "Expected calldata to be {}, got {}",
+                "Expected unique value in calldata to be {}, but got {}.",
                 unique_hex, deploy_calldata_unique
             )
         );
@@ -342,7 +343,7 @@ impl RunnableTrait for TestCase {
         assert_result!(
             deploy_calldata_constructor_calldata_length == constructor_calldata_len_felt,
             format!(
-                "Expected calldata length to be {}, got {}",
+                "Expected constructor calldata length to be {}, but got {}.",
                 constructor_calldata_len_felt, deploy_calldata_constructor_calldata_length
             )
         );
@@ -350,7 +351,7 @@ impl RunnableTrait for TestCase {
         assert_result!(
             deploy_tx.fee_data_availability_mode == DaMode::L1,
             format!(
-                "Expected fee data availability_mode to be {:?}, got {:?}",
+                "Expected fee data availability mode to be {:?}, but got {:?}.",
                 DaMode::L1,
                 deploy_tx.fee_data_availability_mode
             )
@@ -359,7 +360,7 @@ impl RunnableTrait for TestCase {
         assert_result!(
             deploy_tx.nonce == sender_nonce,
             format!(
-                "Expected nonce to be {:?}, got {:?}",
+                "Expected nonce to be {:?}, but got {:?}.",
                 sender_nonce, deploy_tx.nonce
             )
         );
@@ -367,7 +368,7 @@ impl RunnableTrait for TestCase {
         assert_result!(
             deploy_tx.nonce_data_availability_mode == DaMode::L1,
             format!(
-                "Expected nonce data avability mode to be {:?}, got {:?}",
+                "Expected nonce data availability mode to be {:?}, but got {:?}.",
                 DaMode::L1,
                 deploy_tx.nonce_data_availability_mode
             )
@@ -375,14 +376,17 @@ impl RunnableTrait for TestCase {
 
         assert_result!(
             deploy_tx.paymaster_data.is_empty(),
-            "Expected paymaster data to be empty"
+            format!(
+                "Expected paymaster data to be empty, but it was not. Got: {:?}",
+                deploy_tx.paymaster_data
+            )
         );
 
         let sender_address = sender.address();
         assert_result!(
             deploy_tx.sender_address == sender_address,
             format!(
-                "Expected sender address to be {:?}, got {:?}",
+                "Expected sender address to be {:?}, but got {:?}.",
                 sender_address, deploy_tx.sender_address
             )
         );
@@ -405,7 +409,7 @@ impl RunnableTrait for TestCase {
             deploy_receipt.common_receipt_properties.transaction_hash
                 == deploy_result.transaction_hash,
             format!(
-                "Expected declare transaction hash: {:?}, got {:?}",
+                "Expected declare transaction hash: {:?}, but got {:?}",
                 deploy_result.transaction_hash,
                 deploy_receipt.common_receipt_properties.transaction_hash
             )
@@ -415,17 +419,16 @@ impl RunnableTrait for TestCase {
         assert_result!(
             deploy_tx.tip == expected_tip,
             format!(
-                "Expected tip to be {:?}, got {:?}",
+                "Expected tip to be {:?}, but got {:?}",
                 expected_tip, deploy_tx.tip
             )
         );
 
-        println!("deploy_receipt: {:#?}", deploy_receipt);
         let deploy_txn_gas_hex = Felt::from_dec_str(&DEPLOY_TXN_GAS.to_string())?.to_hex_string();
         assert_result!(
             deploy_tx.resource_bounds.l1_gas.max_amount == deploy_txn_gas_hex,
             format!(
-                "Expected l1 gas max amount to be {:?}, got {:?}",
+                "Expected l1 gas max amount to be {:?}, but got {:?}",
                 deploy_txn_gas_hex, deploy_tx.resource_bounds.l1_gas.max_amount
             )
         );
@@ -436,7 +439,7 @@ impl RunnableTrait for TestCase {
             deploy_tx.resource_bounds.l1_gas.max_price_per_unit == deploy_txn_gas_price_hex,
             format!(
                 "Expected l1 gas max price per unit
-                 to be {:?}, got {:?}",
+                 to be {:?}, but got {:?}",
                 deploy_txn_gas_price_hex, deploy_tx.resource_bounds.l1_gas.max_price_per_unit
             )
         );
@@ -445,7 +448,7 @@ impl RunnableTrait for TestCase {
         assert_result!(
             deploy_tx.resource_bounds.l2_gas.max_amount == expected_l2_gas_max_amount,
             format!(
-                "Expected l2 gas max amount to be {:?}, got {:?}",
+                "Expected l2 gas max amount to be {:?}, but got {:?}",
                 expected_l2_gas_max_amount, deploy_tx.resource_bounds.l2_gas.max_amount
             )
         );
@@ -456,7 +459,7 @@ impl RunnableTrait for TestCase {
                 == expected_l2_gas_max_price_per_unit,
             format!(
                 "Expected l2 gas max price per unit
-                 to be {:?}, got {:?}",
+                 to be {:?}, but got {:?}",
                 expected_l2_gas_max_price_per_unit,
                 deploy_tx.resource_bounds.l2_gas.max_price_per_unit
             )
@@ -468,7 +471,7 @@ impl RunnableTrait for TestCase {
         assert_result!(
             actual_fee.amount == estimate_fee.overall_fee,
             format!(
-                "Expected overall fee to be {:?}, got {:?}",
+                "Expected overall fee to be {:?}, but got {:?}",
                 estimate_fee.overall_fee, actual_fee.unit
             )
         );
@@ -476,7 +479,7 @@ impl RunnableTrait for TestCase {
         assert_result!(
             actual_fee.unit == PriceUnit::Fri,
             format!(
-                "Expected price unit to be {:?}, got {:?}",
+                "Expected price unit to be {:?}, but got {:?}",
                 PriceUnit::Fri,
                 actual_fee.unit
             )
@@ -486,7 +489,7 @@ impl RunnableTrait for TestCase {
 
         assert_result!(
             events.len() == 2,
-            format!("Expected 2 events, got {:#?}", events.len())
+            format!("Expected 2 events, but got {:#?}", events.len())
         );
 
         let first_event = deploy_receipt
@@ -498,20 +501,10 @@ impl RunnableTrait for TestCase {
         assert_result!(
             first_event.from_address == UDC_ADDRESS,
             format!(
-                "Expected event from address to be {:?}, got {:?}",
+                "Expected event from address to be {:?}, but got {:?}",
                 UDC_ADDRESS, first_event.from_address
             )
         );
-
-        println!(
-            "deployed_contract_address: {:#?}",
-            deployed_contract_address
-        );
-
-        println!("sender_address: {:#?}", sender_address);
-        println!("unique: {:#?}", unique);
-        println!("classhash: {:#?}", declare_result.class_hash);
-        println!("salt {:#?}", salt);
 
         let first_event_data_first = *first_event
             .data
@@ -680,6 +673,57 @@ impl RunnableTrait for TestCase {
             format!(
                 "Invalid sequencer address in event keys, expected {}, got {:?}",
                 SEQUENCER_ADDRESS, second_event_keys_third
+            )
+        );
+
+        let finality_status = deploy_receipt
+            .common_receipt_properties
+            .finality_status
+            .clone();
+
+        assert_result!(
+            finality_status == TxnFinalityStatus::L2,
+            format!(
+                "Invalid finality status, expected {:?}, got {:?}",
+                TxnFinalityStatus::L2,
+                finality_status
+            )
+        );
+
+        assert_result!(
+            deploy_receipt
+                .common_receipt_properties
+                .messages_sent
+                .is_empty(),
+            "Expected no messages sent"
+        );
+
+        assert_result!(
+            deploy_receipt.common_receipt_properties.transaction_hash
+                == deploy_result.transaction_hash,
+            format!(
+                "Invalid transaction hash, expected {}, got {}",
+                deploy_result.transaction_hash,
+                deploy_receipt.common_receipt_properties.transaction_hash
+            )
+        );
+
+        let execution_status = match deploy_receipt.common_receipt_properties.anon.clone() {
+            starknet_types_rpc::Anonymous::Successful(status) => status.execution_status,
+            _ => {
+                return Err(OpenRpcTestGenError::Other(
+                    "Unexpected execution status type.".to_string(),
+                ));
+            }
+        };
+
+        let expected_execution_status = "SUCCEEDED".to_string();
+
+        assert_result!(
+            execution_status == expected_execution_status,
+            format!(
+                "Expected execution status to be {:?}, got {:?}",
+                expected_execution_status, execution_status
             )
         );
 
