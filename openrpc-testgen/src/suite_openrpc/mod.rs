@@ -48,6 +48,7 @@ pub mod test_get_block_number;
 pub mod test_get_block_txn_count;
 pub mod test_get_block_with_receipts_declare;
 pub mod test_get_block_with_receipts_deploy;
+pub mod test_get_block_with_receipts_invoke;
 pub mod test_get_block_with_tx_hashes;
 pub mod test_get_block_with_txs;
 pub mod test_get_chain_id;
@@ -66,7 +67,6 @@ pub mod test_get_txn_by_block_id_and_index_deploy_account_v1;
 pub mod test_get_txn_by_block_id_and_index_deploy_account_v3;
 pub mod test_spec_version;
 pub mod test_syncing;
-
 #[derive(Clone, Debug)]
 pub struct TestSuiteOpenRpc {
     pub random_paymaster_account: RandomSingleOwnerAccount,
