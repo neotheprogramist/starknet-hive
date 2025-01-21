@@ -46,6 +46,10 @@ pub mod test_estimate_fee_fri;
 pub mod test_estimate_fee_wei;
 pub mod test_get_block_number;
 pub mod test_get_block_txn_count;
+pub mod test_get_block_with_receipts_declare;
+pub mod test_get_block_with_receipts_deploy;
+pub mod test_get_block_with_receipts_deploy_account;
+pub mod test_get_block_with_receipts_invoke;
 pub mod test_get_block_with_tx_hashes;
 pub mod test_get_block_with_txs;
 pub mod test_get_chain_id;
@@ -68,7 +72,6 @@ pub mod test_simulate_deploy_account_skip_fee_charge;
 pub mod test_simulate_deploy_account_skip_validation_and_fee;
 pub mod test_spec_version;
 pub mod test_syncing;
-
 #[derive(Clone, Debug)]
 pub struct TestSuiteOpenRpc {
     pub random_paymaster_account: RandomSingleOwnerAccount,

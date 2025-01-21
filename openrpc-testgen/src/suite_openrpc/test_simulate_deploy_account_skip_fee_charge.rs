@@ -6,7 +6,9 @@ use crate::{
             call::Call,
             creation::create::{create_account, AccountType},
             deployment::{
-                deploy::{estimate_fee_deploy, simulate_deploy_account, DeployAccountVersion},
+                deploy::{
+                    estimate_fee_deploy_account, simulate_deploy_account, DeployAccountVersion,
+                },
                 structs::{ValidatedWaitParams, WaitForTx},
             },
         },
@@ -62,7 +64,7 @@ impl RunnableTrait for TestCase {
             wait_params: ValidatedWaitParams::default(),
         };
 
-        let estimate_fee = estimate_fee_deploy(
+        let estimate_fee = estimate_fee_deploy_account(
             test_input.random_paymaster_account.provider(),
             test_input.random_paymaster_account.chain_id(),
             wait_config,

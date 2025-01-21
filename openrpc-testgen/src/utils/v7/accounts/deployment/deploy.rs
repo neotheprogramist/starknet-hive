@@ -101,7 +101,7 @@ pub async fn simulate_deploy_account(
     .await
 }
 
-pub async fn estimate_fee_deploy(
+pub async fn estimate_fee_deploy_account(
     provider: &JsonRpcClient<HttpTransport>,
     chain_id: Felt,
     wait_config: WaitForTx,
