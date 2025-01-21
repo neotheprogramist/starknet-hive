@@ -79,6 +79,7 @@ impl RunnableTrait for TestCase {
             test_input.random_paymaster_account.chain_id(),
             wait_config,
             account_data,
+            false,
             DeployAccountVersion::V3,
         )
         .await?;

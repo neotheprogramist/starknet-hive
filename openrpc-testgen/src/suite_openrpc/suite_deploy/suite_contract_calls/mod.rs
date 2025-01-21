@@ -30,6 +30,8 @@ pub mod test_get_txn_status;
 pub mod test_invoke_contract_v1;
 pub mod test_invoke_contract_v3;
 pub mod test_invoke_v3_trace;
+pub mod test_simulate_invoke_v3_skip_fee;
+pub mod test_simulate_invoke_v3_skip_validate_skip_fee;
 pub mod test_trace_block_txn;
 
 pub struct TestSuiteContractCalls {
@@ -37,6 +39,7 @@ pub struct TestSuiteContractCalls {
     pub random_executable_account: RandomSingleOwnerAccount,
     pub deployment_receipt: TxnReceipt<Felt>,
     pub deployed_contract_address: Felt,
+    pub account_class_hash: Felt,
 }
 
 impl SetupableTrait for TestSuiteContractCalls {
@@ -96,6 +99,7 @@ impl SetupableTrait for TestSuiteContractCalls {
             random_executable_account: setup_input.random_executable_account.clone(),
             deployment_receipt,
             deployed_contract_address,
+            account_class_hash: setup_input.account_class_hash,
         })
     }
 }

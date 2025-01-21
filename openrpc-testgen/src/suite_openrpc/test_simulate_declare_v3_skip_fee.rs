@@ -3,17 +3,18 @@ use std::str::FromStr;
 
 use crate::utils::v7::accounts::account::{Account, ConnectedAccount};
 use crate::utils::v7::endpoints::declare_contract::get_compiled_contract;
-use crate::utils::v7::endpoints::utils::wait_for_sent_transaction;
 use crate::utils::v7::providers::provider::Provider;
-use crate::{assert_matches_result, assert_result, RandomizableAccountsTrait};
+use crate::{assert_eq_result, assert_matches_result, assert_result, RandomizableAccountsTrait};
 use crate::{
     utils::v7::endpoints::{errors::OpenRpcTestGenError, utils::get_selector_from_name},
     RunnableTrait,
 };
 use starknet_types_core::felt::Felt;
 use starknet_types_rpc::{
-    BlockId, BlockTag, DeclareTransactionTrace, EntryPointType, TransactionTrace,
+    BlockId, BlockTag, DeclareTransactionTrace, EntryPointType, FeeEstimate,
+    SimulateTransactionsResult, TransactionTrace,
 };
+use t9n::txn_hashes::declare_hash::class_hash;
 
 pub const STRK_ERC20_CONTRACT_ADDRESS: Felt =
     Felt::from_hex_unchecked("0x04718f5a0fc34cc1af16a1cdee98ffb20c31f5cd61d6ab07201858f4287c938d");
@@ -28,66 +29,99 @@ impl RunnableTrait for TestCase {
         let account = test_input.random_paymaster_account.random_accounts()?;
         let acc_class_hash = test_input.account_class_hash;
 
-        let nonce = account
+        let (flattened_sierra_class, compiled_class_hash) = get_compiled_contract(
+                PathBuf::from_str("target/dev/contracts_contracts_sample_contract_8_HelloStarknet.contract_class.json")?,
+                PathBuf::from_str("target/dev/contracts_contracts_sample_contract_8_HelloStarknet.compiled_contract_class.json")?,
+            )
+            .await?;
+
+        let estimate_fee = test_input
+            .random_paymaster_account
+            .declare_v3(flattened_sierra_class.clone(), compiled_class_hash)
+            .estimate_fee()
+            .await?;
+
+        let nonce_before_simulate = account
             .provider()
             .get_nonce(BlockId::Tag(BlockTag::Pending), account.address())
             .await?;
 
-        let (flattened_sierra_class, compiled_class_hash) = get_compiled_contract(
-                PathBuf::from_str("target/dev/contracts_contracts_sample_contract_7_HelloStarknet.contract_class.json")?,
-                PathBuf::from_str("target/dev/contracts_contracts_sample_contract_7_HelloStarknet.compiled_contract_class.json")?,
-            )
-            .await?;
-
-        let declare_result = test_input
+        let simulate_declare_result = test_input
             .random_paymaster_account
             .declare_v3(flattened_sierra_class.clone(), compiled_class_hash)
-            .send()
-            .await?;
-
-        wait_for_sent_transaction(
-            declare_result.transaction_hash,
-            &test_input.random_paymaster_account.random_accounts()?,
-        )
-        .await?;
-
-        let trace_result = account
-            .provider()
-            .trace_transaction(declare_result.transaction_hash)
+            .simulate(false, true)
             .await;
 
-        let result = trace_result.is_ok();
+        let nonce_after_simulate = account
+            .provider()
+            .get_nonce(BlockId::Tag(BlockTag::Pending), account.address())
+            .await?;
+
+        let class_hash = class_hash(flattened_sierra_class.clone());
+
+        let result = simulate_declare_result.is_ok();
 
         assert_result!(result);
 
-        let trace = trace_result?;
+        let simulate_declare = simulate_declare_result?;
 
         assert_matches_result!(
-            trace,
+            simulate_declare,
+            SimulateTransactionsResult {
+                fee_estimation: Some(FeeEstimate { .. }),
+                transaction_trace: Some(TransactionTrace::Declare(DeclareTransactionTrace { .. }))
+            }
+        );
+
+        let (fee_estimation, transaction_trace) = match simulate_declare {
+            SimulateTransactionsResult {
+                fee_estimation: Some(fee),
+                transaction_trace: Some(trace),
+            } => (Some(fee), Some(trace)),
+            SimulateTransactionsResult {
+                fee_estimation: Some(fee),
+                transaction_trace: None,
+            } => (Some(fee), None),
+            SimulateTransactionsResult {
+                fee_estimation: None,
+                transaction_trace: Some(trace),
+            } => (None, Some(trace)),
+            _ => (None, None),
+        };
+
+        let fee_estimation = fee_estimation.ok_or_else(|| {
+            OpenRpcTestGenError::Other(
+                "Fee estimation is missing in simulate transaction".to_string(),
+            )
+        })?;
+
+        let transaction_trace = transaction_trace.ok_or_else(|| {
+            OpenRpcTestGenError::Other(
+                "Transaction trace is missing in simulate transaction".to_string(),
+            )
+        })?;
+
+        assert_matches_result!(
+            transaction_trace,
             TransactionTrace::Declare(DeclareTransactionTrace { .. })
         );
 
-        let declare_trace = match trace {
+        let declare_trace = match transaction_trace {
             TransactionTrace::Declare(declare_trace) => Ok(declare_trace),
             _ => Err(OpenRpcTestGenError::Other(
                 "Expected DeclareTransactionTrace, but found a different transaction trace type"
                     .to_string(),
             )),
         }?;
-        let fee_transfer_invocation = declare_trace.fee_transfer_invocation.ok_or_else(|| {
-            OpenRpcTestGenError::Other(
-                "Fee transfer invocation is missing in invoke trace".to_string(),
-            )
-        })?;
-
-        let state_diff = declare_trace.state_diff.ok_or_else(|| {
-            OpenRpcTestGenError::Other("State diff is missing in invoke trace".to_string())
-        })?;
 
         let validate_invocation = declare_trace.validate_invocation.ok_or_else(|| {
             OpenRpcTestGenError::Other(
                 "Validate invocation is missing in deploy account trace".to_string(),
             )
+        })?;
+
+        let state_diff = declare_trace.state_diff.ok_or_else(|| {
+            OpenRpcTestGenError::Other("State diff is missing in invoke trace".to_string())
         })?;
 
         let state_diff_nonce = state_diff
@@ -98,7 +132,6 @@ impl RunnableTrait for TestCase {
                 OpenRpcTestGenError::Other("Nonce not found in state diff".to_string())
             })?;
 
-        let transfer_selector = get_selector_from_name("transfer")?;
         let validate_declare_selector = get_selector_from_name("__validate_declare__")?;
 
         // caller address
@@ -106,48 +139,77 @@ impl RunnableTrait for TestCase {
 
         let entry_point_type_external = EntryPointType::External;
 
-        // fee_transfer_invocation STRK_ERC20_CONTRACT_ADDRESS
+        // Validate fee estimation
+        assert_eq_result!(
+            fee_estimation.data_gas_consumed,
+            estimate_fee.data_gas_consumed,
+            "data_gas_consumed mismatch: expected {:?}, but found {:?}",
+            estimate_fee.data_gas_consumed,
+            fee_estimation.data_gas_consumed
+        );
+
+        assert_eq_result!(
+            fee_estimation.data_gas_price,
+            estimate_fee.data_gas_price,
+            "data_gas_price mismatch: expected {:?}, but found {:?}",
+            estimate_fee.data_gas_price,
+            fee_estimation.data_gas_price
+        );
+
+        assert_eq_result!(
+            fee_estimation.gas_consumed,
+            estimate_fee.gas_consumed,
+            "gas_consumed mismatch: expected {:?}, but found {:?}",
+            estimate_fee.gas_consumed,
+            fee_estimation.gas_consumed
+        );
+
+        assert_eq_result!(
+            fee_estimation.gas_price,
+            estimate_fee.gas_price,
+            "gas_price mismatch: expected {:?}, but found {:?}",
+            estimate_fee.gas_price,
+            fee_estimation.gas_price
+        );
+
+        assert_eq_result!(
+            fee_estimation.overall_fee,
+            estimate_fee.overall_fee,
+            "overall_fee mismatch: expected {:?}, but found {:?}",
+            estimate_fee.overall_fee,
+            fee_estimation.overall_fee
+        );
+
+        assert_eq_result!(
+            fee_estimation.unit,
+            estimate_fee.unit,
+            "unit mismatch: expected {:?}, but found {:?}",
+            estimate_fee.unit,
+            fee_estimation.unit
+        );
+
+        // Validate nonces before and after simulate
         assert_result!(
-            fee_transfer_invocation.function_call.contract_address == STRK_ERC20_CONTRACT_ADDRESS,
-            format!(
-                "Contract address mismatch in fee transfer: expected {:?}, but found {:?}",
-                STRK_ERC20_CONTRACT_ADDRESS, fee_transfer_invocation.function_call.contract_address
+        nonce_before_simulate == nonce_after_simulate,
+        format!(
+            "Nonce before and after simulate should be equal found: before simulate {:?}, after simulate {:?}",
+            nonce_before_simulate ,
+            nonce_after_simulate
             )
         );
 
-        // fee_transfer_invocation caller address
+        // fee_transfer_invocation should be none because of skipFeeCharge flag
         assert_result!(
-            fee_transfer_invocation.caller_address == account_address,
-            format!(
-                "Caller address mismatch in fee transfer: expected {:?}, but found {:?}",
-                account_address, fee_transfer_invocation.caller_address
-            )
-        );
-
-        // fee_transfer_invocation entry point selector
-        assert_result!(
-            fee_transfer_invocation.function_call.entry_point_selector == transfer_selector,
-            format!(
-                "Entry point selector mismatch in fee transfer: expected {:?}, but found {:?}",
-                transfer_selector, fee_transfer_invocation.function_call.entry_point_selector
-            )
-        );
-
-        // fee_transfer_invocation entry point type
-        assert_result!(
-            fee_transfer_invocation.entry_point_type == entry_point_type_external,
-            format!(
-                "Entry point type mismatch in nested call: expected {:?}, but found {:?}",
-                entry_point_type_external, fee_transfer_invocation.entry_point_type
-            )
+            declare_trace.fee_transfer_invocation.is_none(),
+            "fee_transfer_invocation should be none."
         );
 
         // state_diff nonces
         assert_result!(
-            state_diff_nonce == nonce + Felt::ONE,
+            state_diff_nonce == nonce_before_simulate + Felt::ONE,
             format!(
                 "Nonce mismatch: expected {:?}, but found {:?}",
-                nonce + Felt::ONE,
+                nonce_before_simulate + Felt::ONE,
                 state_diff_nonce
             )
         );
@@ -184,10 +246,10 @@ impl RunnableTrait for TestCase {
 
         // Validate that the class_hash in the state diff matches the class_hash from the declare result
         assert_result!(
-            state_diff_class_hash == declare_result.class_hash,
+            state_diff_class_hash == class_hash,
             format!(
                 "Class hash mismatch: expected {:?}, but found {:?}",
-                declare_result.class_hash, state_diff_class_hash
+                class_hash, state_diff_class_hash
             )
         );
 

@@ -52,7 +52,7 @@ pub fn calculate_declare_v3_hash(
     Ok(Poseidon::hash_array(&fields_to_hash))
 }
 
-fn class_hash(contract_class: ContractClass<Felt>) -> Felt {
+pub fn class_hash(contract_class: ContractClass<Felt>) -> Felt {
     let data = vec![
         PREFIX_CONTRACT_CLASS_V0_1_0,
         hash_entrypoints(&contract_class.entry_points_by_type.external),

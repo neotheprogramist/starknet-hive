@@ -5,6 +5,7 @@ mod sample_contract_4;
 mod sample_contract_5;
 mod sample_contract_6;
 mod sample_contract_7;
+mod sample_contract_8;
 mod smpl1;
 mod smpl2;
 mod smpl3;
