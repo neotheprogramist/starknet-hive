@@ -513,81 +513,81 @@ impl RunnableTrait for TestCase {
         println!("classhash: {:#?}", declare_result.class_hash);
         println!("salt {:#?}", salt);
 
-        let first_event_event_data_first = *first_event
+        let first_event_data_first = *first_event
             .data
             .first()
             .ok_or_else(|| OpenRpcTestGenError::Other("Missing first event data".to_string()))?;
 
         assert_result!(
-            first_event_event_data_first == deployed_contract_address,
+            first_event_data_first == deployed_contract_address,
             format!(
                 "Expected first event data to be {:?}, got {:?}",
-                deployed_contract_address, first_event_event_data_first
+                deployed_contract_address, first_event_data_first
             )
         );
 
-        let first_event_event_data_second = *first_event
+        let first_event_data_second = *first_event
             .data
             .get(1)
             .ok_or_else(|| OpenRpcTestGenError::Other("Missing secpnd event data".to_string()))?;
 
         assert_result!(
-            first_event_event_data_second == sender_address,
+            first_event_data_second == sender_address,
             format!(
                 "Expected second event data to be {:?}, got {:?}",
-                sender_address, first_event_event_data_second
+                sender_address, first_event_data_second
             )
         );
 
-        let first_event_event_data_third = *first_event
+        let first_event_data_third = *first_event
             .data
             .get(2)
             .ok_or_else(|| OpenRpcTestGenError::Other("Missing third event data".to_string()))?;
 
         assert_result!(
-            first_event_event_data_third == unique_hex,
+            first_event_data_third == unique_hex,
             format!(
                 "Expected third event data to be {:?}, got {:?}",
-                unique_hex, first_event_event_data_third
+                unique_hex, first_event_data_third
             )
         );
 
-        let first_event_event_data_fourth = *first_event
+        let first_event_data_fourth = *first_event
             .data
             .get(3)
             .ok_or_else(|| OpenRpcTestGenError::Other("Missing fourth event data".to_string()))?;
 
         assert_result!(
-            first_event_event_data_fourth == declare_result.class_hash,
+            first_event_data_fourth == declare_result.class_hash,
             format!(
                 "Expected fourth event data to be {:?}, got {:?}",
-                declare_result.class_hash, first_event_event_data_fourth
+                declare_result.class_hash, first_event_data_fourth
             )
         );
 
-        let first_event_event_data_fifth = *first_event
+        let first_event_data_fifth = *first_event
             .data
             .get(4)
             .ok_or_else(|| OpenRpcTestGenError::Other("Missing fifth event data".to_string()))?;
 
         assert_result!(
-            first_event_event_data_fifth == constructor_calldata_len_felt,
+            first_event_data_fifth == constructor_calldata_len_felt,
             format!(
                 "Expected fifth event data to be {:?}, got {:?}",
-                constructor_calldata_len_felt, first_event_event_data_fifth
+                constructor_calldata_len_felt, first_event_data_fifth
             )
         );
 
-        let first_event_event_data_sixth = *first_event
+        let first_event_data_sixth = *first_event
             .data
             .get(5)
             .ok_or_else(|| OpenRpcTestGenError::Other("Missing sixth event data".to_string()))?;
 
         assert_result!(
-            first_event_event_data_sixth == salt,
+            first_event_data_sixth == salt,
             format!(
                 "Expected sixth event data to be {:?}, got {:?}",
-                salt, first_event_event_data_sixth
+                salt, first_event_data_sixth
             )
         );
 
@@ -596,8 +596,6 @@ impl RunnableTrait for TestCase {
             .first()
             .ok_or_else(|| OpenRpcTestGenError::Other("Missing first event key".to_string()))?;
         let keccak_contract_deployed = starknet_keccak("ContractDeployed".as_bytes());
-        println!("keccak_contract_deployed: {:#?}", keccak_contract_deployed);
-        println!("first_event_keys_first: {:#?}", first_event_keys_first);
 
         assert_result!(
             first_event_keys_first == keccak_contract_deployed,
@@ -607,122 +605,83 @@ impl RunnableTrait for TestCase {
             )
         );
 
-        let first_event = deploy_receipt
-        .common_receipt_properties
-        .events
-        .first()
-        .ok_or_else(|| OpenRpcTestGenError::Other("Event missing".to_string()))?;
+        let second_event = deploy_receipt
+            .common_receipt_properties
+            .events
+            .get(1)
+            .ok_or_else(|| OpenRpcTestGenError::Other("Event missing".to_string()))?;
 
-    assert_result!(
-        first_event.from_address == UDC_ADDRESS,
-        format!(
-            "Expected event from address to be {:?}, got {:?}",
-            UDC_ADDRESS, first_event.from_address
-        )
-    );
+        assert_result!(
+            second_event.from_address == STRK_ADDRESS,
+            format!(
+                "Expected event from address to be {:?}, got {:?}",
+                STRK_ADDRESS, second_event.from_address
+            )
+        );
 
-    println!(
-        "deployed_contract_address: {:#?}",
-        deployed_contract_address
-    );
+        let second_event_data_first = *second_event
+            .data
+            .first()
+            .ok_or_else(|| OpenRpcTestGenError::Other("Missing second event data".to_string()))?;
 
-    println!("sender_address: {:#?}", sender_address);
-    println!("unique: {:#?}", unique);
-    println!("classhash: {:#?}", declare_result.class_hash);
-    println!("salt {:#?}", salt);
+        assert_result!(
+            second_event_data_first == estimate_fee.overall_fee,
+            format!(
+                "Invalid fee amount in event data, expected {}, got {:?}",
+                estimate_fee.overall_fee, second_event_data_first
+            )
+        );
 
-    let first_event_event_data_first = *first_event
-        .data
-        .first()
-        .ok_or_else(|| OpenRpcTestGenError::Other("Missing first event data".to_string()))?;
+        let second_event_data_second = *second_event
+            .data
+            .get(1)
+            .ok_or_else(|| OpenRpcTestGenError::Other("Missing second event data".to_string()))?;
 
-    assert_result!(
-        first_event_event_data_first == deployed_contract_address,
-        format!(
-            "Expected first event data to be {:?}, got {:?}",
-            deployed_contract_address, first_event_event_data_first
-        )
+        assert_result!(
+            second_event_data_second == Felt::ZERO,
+            format!(
+                "Invalid fee amount in event data, expected {}, got {:?}",
+                Felt::ZERO,
+                second_event_data_second
+            )
+        );
 
-        // let event_keys_first = *event
-        //     .keys
-        //     .first()
-        //     .ok_or_else(|| OpenRpcTestGenError::Other("Missing first event key".to_string()))?;
-        // let transfer_keccak = starknet_keccak("Transfer".as_bytes());
-        // assert_result!(
-        //     event_keys_first == transfer_keccak,
-        //     format!(
-        //         "Expected first event key to be {:?}, got {:?}",
-        //         transfer_keccak, event_keys_first
-        //     )
-        // );
+        let second_event_keys_first = *second_event
+            .keys
+            .first()
+            .ok_or_else(|| OpenRpcTestGenError::Other("Missing second event key".to_string()))?;
+        let keccak_transfer = starknet_keccak("Transfer".as_bytes());
+        assert_result!(
+            second_event_keys_first == keccak_transfer,
+            format!(
+                "Invalid keccak transfer in event keys, expected {}, got {:?}",
+                keccak_transfer, second_event_keys_first
+            )
+        );
 
-        // let event_keys_second = *event
-        //     .keys
-        //     .get(1)
-        //     .ok_or_else(|| OpenRpcTestGenError::Other("Missing second event key".to_string()))?;
-        // assert_result!(
-        //     event_keys_second == sender_address,
-        //     format!(
-        //         "Expected second event key to be {:?}, got {:?}",
-        //         sender_address, event_keys_second
-        //     )
-        // );
+        let second_event_keys_second = *second_event
+            .keys
+            .get(1)
+            .ok_or_else(|| OpenRpcTestGenError::Other("Missing second event key".to_string()))?;
+        assert_result!(
+            second_event_keys_second == sender_address,
+            format!(
+                "Invalid sender address in event keys, expected {}, got {:?}",
+                sender_address, second_event_keys_second
+            )
+        );
 
-        // let event_keys_third = *event
-        //     .keys
-        //     .get(2)
-        //     .ok_or_else(|| OpenRpcTestGenError::Other("Missing third event key".to_string()))?;
-        // assert_result!(
-        //     event_keys_third == SEQUENCER_ADDRESS,
-        //     format!(
-        //         "Expected third event key to be {:?}, got {:?}",
-        //         SEQUENCER_ADDRESS, event_keys_third
-        //     )
-        // );
-
-        // assert_result!(
-        //     declare_receipt.common_receipt_properties.finality_status == TxnFinalityStatus::L2,
-        //     format!(
-        //         "Exptected finality status to be {:?}, got {:?}",
-        //         TxnFinalityStatus::L2,
-        //         declare_receipt.common_receipt_properties.finality_status
-        //     )
-        // );
-
-        // assert_result!(
-        //     declare_receipt
-        //         .common_receipt_properties
-        //         .messages_sent
-        //         .is_empty(),
-        //     "Expected messages sent to be empty."
-        // );
-
-        // assert_result!(
-        //     declare_receipt.common_receipt_properties.transaction_hash == declare_tx_hash,
-        //     format!(
-        //         "Exptected transaction hash to be {:?}, got {:?}",
-        //         declare_tx_hash, declare_receipt.common_receipt_properties.transaction_hash
-        //     )
-        // );
-
-        // let execution_status = match declare_receipt.common_receipt_properties.anon.clone() {
-        //     starknet_types_rpc::Anonymous::Successful(status) => status.execution_status,
-        //     _ => {
-        //         return Err(OpenRpcTestGenError::Other(
-        //             "Unexpected execution status type.".to_string(),
-        //         ));
-        //     }
-        // };
-
-        // let expected_execution_status = "SUCCEEDED".to_string();
-
-        // assert_result!(
-        //     execution_status == expected_execution_status,
-        //     format!(
-        //         "Expected execution status to be {:?}, got {:?}",
-        //         expected_execution_status, execution_status
-        //     )
-        // );
+        let second_event_keys_third = *second_event
+            .keys
+            .get(2)
+            .ok_or_else(|| OpenRpcTestGenError::Other("Missing second event key".to_string()))?;
+        assert_result!(
+            second_event_keys_third == SEQUENCER_ADDRESS,
+            format!(
+                "Invalid sequencer address in event keys, expected {}, got {:?}",
+                SEQUENCER_ADDRESS, second_event_keys_third
+            )
+        );
 
         Ok(Self {})
     }
