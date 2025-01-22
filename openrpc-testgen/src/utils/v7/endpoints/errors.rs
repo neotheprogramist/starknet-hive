@@ -7,7 +7,10 @@ use crate::{
     utils::{
         conversions::errors::ConversionsError,
         v7::{
-            accounts::{account::AccountError, errors::CreationError, utils::mint::MintError},
+            accounts::{
+                account::AccountError, errors::CreationError,
+                single_owner::SignError as SingleOwnerSignError, utils::mint::MintError,
+            },
             providers::provider::ProviderError,
             signers::local_wallet::SignError,
         },
@@ -15,7 +18,6 @@ use crate::{
 };
 use core::fmt::{Display, Formatter, Result};
 use std::{collections::HashMap, convert::Infallible, num::ParseIntError};
-
 #[derive(Error, Debug)]
 pub enum OpenRpcTestGenError {
     #[error(transparent)]
@@ -38,6 +40,8 @@ pub enum OpenRpcTestGenError {
     AccountError_(
         #[from] AccountError<crate::utils::v7::accounts::single_owner::SignError<SignError>>,
     ),
+    #[error(transparent)]
+    SingleOwnerSignError(#[from] SingleOwnerSignError<SignError>),
     #[error(transparent)]
     AccountError(#[from] AccountError<SignError>),
     #[error(transparent)]

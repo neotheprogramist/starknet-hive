@@ -574,7 +574,7 @@ where
         self.prepare().await?.send().await
     }
 
-    async fn prepare(
+    pub async fn prepare(
         &self,
     ) -> Result<PreparedAccountDeploymentV3<'f, F>, AccountFactoryError<F::SignError>> {
         // Resolves nonce
@@ -900,7 +900,7 @@ where
             .map_err(AccountFactoryError::Provider)
     }
 
-    async fn get_deploy_request(
+    pub async fn get_deploy_request(
         &self,
         query_only: bool,
         skip_signature: bool,
@@ -1001,7 +1001,7 @@ where
             .map_err(AccountFactoryError::Provider)
     }
 
-    async fn get_deploy_request(
+    pub async fn get_deploy_request(
         &self,
         _query_only: bool,
         skip_signature: bool,

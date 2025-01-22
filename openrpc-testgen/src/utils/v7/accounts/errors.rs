@@ -1,7 +1,7 @@
 use starknet_types_core::felt::{Felt, FromStrError};
 use thiserror::Error;
 
-use crate::utils::v7::providers::provider::ProviderError;
+use crate::utils::v7::{self, providers::provider::ProviderError};
 
 use super::factory::AccountFactoryError;
 
@@ -79,6 +79,13 @@ impl From<FromStrError> for CreationError {
         CreationError::RpcError(format!("{:?}", error))
     }
 }
+
+impl From<v7::signers::local_wallet::SignError> for CreationError {
+    fn from(error: v7::signers::local_wallet::SignError) -> Self {
+        CreationError::AccountFactoryError(format!("SignError: {:?}", error))
+    }
+}
+
 #[derive(Error, Debug)]
 pub enum TransactionError {
     #[error("Transaction has been rejected")]
