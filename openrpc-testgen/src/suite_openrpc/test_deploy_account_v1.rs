@@ -6,7 +6,7 @@ use crate::{
             call::Call,
             creation::create::{create_account, AccountType},
             deployment::{
-                deploy::{deploy_account, DeployAccountVersion},
+                deploy::{deploy_account, estimate_fee_deploy_account, DeployAccountVersion},
                 structs::{ValidatedWaitParams, WaitForTx},
             },
         },
@@ -19,12 +19,12 @@ use crate::{
     RandomizableAccountsTrait, RunnableTrait,
 };
 use starknet_types_core::felt::Felt;
-use starknet_types_rpc::{BlockId, DaMode, DeployAccountTxn, MaybePendingBlockWithTxs, Txn};
+use starknet_types_rpc::{BlockId, DeployAccountTxn, MaybePendingBlockWithTxs, Txn};
 
-const DEPLOY_ACCOUNT_TXN_GAS: Felt = Felt::from_hex_unchecked("0x376");
-const DEPLOY_ACCOUNT_TXN_GAS_PRICE: Felt = Felt::from_hex_unchecked("0xf");
-const STRK: Felt =
-    Felt::from_hex_unchecked("0x4718F5A0FC34CC1AF16A1CDEE98FFB20C31F5CD61D6AB07201858F4287C938D");
+const DEPLOY_ACCOUNT_MAX_FEE: Felt = Felt::from_hex_unchecked("0x336f");
+const ETH: Felt =
+    Felt::from_hex_unchecked("0x49D36570D4E46F48E99674BD3FCC84644DDD6B96F7C741B1562B82F9E004DC7");
+
 #[derive(Clone, Debug)]
 pub struct TestCase {}
 
@@ -45,7 +45,7 @@ impl RunnableTrait for TestCase {
         let transfer_execution = test_input
             .random_paymaster_account
             .execute_v3(vec![Call {
-                to: STRK,
+                to: ETH,
                 selector: get_selector_from_name("transfer")?,
                 calldata: vec![account_data.address, transfer_amount, Felt::ZERO],
             }])
@@ -68,7 +68,7 @@ impl RunnableTrait for TestCase {
             test_input.random_paymaster_account.chain_id(),
             wait_config,
             account_data,
-            DeployAccountVersion::V3,
+            DeployAccountVersion::V1,
         )
         .await?;
 
@@ -119,7 +119,7 @@ impl RunnableTrait for TestCase {
             .await?;
 
         let deploy_account_txn = match txn {
-            Txn::DeployAccount(DeployAccountTxn::V3(txn)) => txn,
+            Txn::DeployAccount(DeployAccountTxn::V1(txn)) => txn,
             _ => {
                 return Err(OpenRpcTestGenError::UnexpectedTxnType(format!(
                     "Unexpected transaction response type: {:?}",
@@ -127,6 +127,8 @@ impl RunnableTrait for TestCase {
                 )));
             }
         };
+
+        println!("deploy_account_txn {:?}", deploy_account_txn);
 
         let expected_class_hash = test_input.account_class_hash;
         assert_result!(
@@ -171,12 +173,11 @@ impl RunnableTrait for TestCase {
             )
         );
 
-        let expected_fee_damode = DaMode::L1;
         assert_result!(
-            deploy_account_txn.fee_data_availability_mode == expected_fee_damode,
+            deploy_account_txn.max_fee == DEPLOY_ACCOUNT_MAX_FEE,
             format!(
-                "Expected fee data availability mode to be {:?}, but got {:?}",
-                expected_fee_damode, deploy_account_txn.fee_data_availability_mode
+                "Expected max fee to be {:?}, but got {:?}",
+                DEPLOY_ACCOUNT_MAX_FEE, deploy_account_txn.max_fee
             )
         );
 
@@ -186,74 +187,6 @@ impl RunnableTrait for TestCase {
             format!(
                 "Expected nonce to be {:?}, but got {:?}",
                 expected_initial_account_nonce, deploy_account_txn.nonce
-            )
-        );
-
-        let expected_nonce_damode = DaMode::L1;
-        assert_result!(
-            deploy_account_txn.nonce_data_availability_mode == expected_nonce_damode,
-            format!(
-                "Expected nonce data availability mode to be {:?}, but got {:?}",
-                expected_nonce_damode, deploy_account_txn.nonce_data_availability_mode
-            )
-        );
-
-        assert_result!(
-            deploy_account_txn.paymaster_data.is_empty(),
-            format!(
-                "Expected paymaster data to be empty, but got {:?}",
-                deploy_account_txn.paymaster_data
-            )
-        );
-
-        let l1_gas_max_amount =
-            Felt::from_hex(&deploy_account_txn.resource_bounds.l1_gas.max_amount)?;
-        assert_result!(
-            l1_gas_max_amount == DEPLOY_ACCOUNT_TXN_GAS,
-            format!(
-                "Expected L1 gas to be {:?}, but got {:?}",
-                DEPLOY_ACCOUNT_TXN_GAS, deploy_account_txn.resource_bounds.l1_gas
-            )
-        );
-        let l1_gas_max_price_per_unit =
-            Felt::from_hex(&deploy_account_txn.resource_bounds.l1_gas.max_price_per_unit)?;
-
-        assert_result!(
-            l1_gas_max_price_per_unit == DEPLOY_ACCOUNT_TXN_GAS_PRICE,
-            format!(
-                "Expected L1 gas price to be {:?}, but got {:?}",
-                DEPLOY_ACCOUNT_TXN_GAS_PRICE, deploy_account_txn.resource_bounds.l1_gas
-            )
-        );
-
-        let l2_gas_max_amount =
-            Felt::from_hex(&deploy_account_txn.resource_bounds.l2_gas.max_amount)?;
-        assert_result!(
-            l2_gas_max_amount == Felt::ZERO,
-            format!(
-                "Expected L2 gas to be {:?}, but got {:?}",
-                Felt::ZERO,
-                deploy_account_txn.resource_bounds.l2_gas
-            )
-        );
-        let l2_gas_max_price_per_unit =
-            Felt::from_hex(&deploy_account_txn.resource_bounds.l2_gas.max_price_per_unit)?;
-
-        assert_result!(
-            l2_gas_max_price_per_unit == Felt::ZERO,
-            format!(
-                "Expected L2 gas price to be {:?}, but got {:?}",
-                Felt::ZERO,
-                deploy_account_txn.resource_bounds.l2_gas
-            )
-        );
-
-        let expected_tip = Felt::ZERO;
-        assert_result!(
-            deploy_account_txn.tip == expected_tip,
-            format!(
-                "Expected tip to be {:?}, but got {:?}",
-                expected_tip, deploy_account_txn.tip
             )
         );
 

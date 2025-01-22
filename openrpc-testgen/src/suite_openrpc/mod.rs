@@ -41,6 +41,8 @@ pub mod test_declare_txn_v3;
 pub mod test_declare_v3_trace;
 pub mod test_deploy_account_outside_execution;
 pub mod test_deploy_account_trace;
+pub mod test_deploy_account_v1;
+pub mod test_deploy_account_v3;
 pub mod test_erc20_transfer_outside_execution;
 pub mod test_estimate_fee_fri;
 pub mod test_estimate_fee_wei;
@@ -72,7 +74,6 @@ pub mod test_simulate_deploy_account_skip_fee_charge;
 pub mod test_simulate_deploy_account_skip_validation_and_fee;
 pub mod test_spec_version;
 pub mod test_syncing;
-pub mod test_deploy_account_v3;
 #[derive(Clone, Debug)]
 pub struct TestSuiteOpenRpc {
     pub random_paymaster_account: RandomSingleOwnerAccount,
