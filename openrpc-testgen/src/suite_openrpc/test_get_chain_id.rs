@@ -1,12 +1,15 @@
+use starknet_types_core::felt::Felt;
+
 use crate::{
     assert_result,
     utils::v7::{
-        accounts::account::ConnectedAccount, endpoints::errors::OpenRpcTestGenError,
+        accounts::account::{starknet_keccak, ConnectedAccount},
+        endpoints::{errors::OpenRpcTestGenError, utils::get_selector_from_name},
         providers::provider::Provider,
     },
     RunnableTrait,
 };
-
+const EXPECTED_CHAIN_ID: Felt = Felt::from_hex_unchecked("0x5649534f46545f4445564e4554");
 #[derive(Clone, Debug)]
 pub struct TestCase {}
 
@@ -23,6 +26,13 @@ impl RunnableTrait for TestCase {
         let result = chain_id.is_ok();
 
         assert_result!(result);
+
+        let chain_id = chain_id?;
+
+        assert_result!(
+            chain_id == EXPECTED_CHAIN_ID,
+            format!("Mismatch chain id: {} != {}", chain_id, EXPECTED_CHAIN_ID)
+        );
 
         Ok(Self {})
     }
