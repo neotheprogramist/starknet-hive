@@ -72,6 +72,7 @@ pub mod test_simulate_deploy_account_skip_fee_charge;
 pub mod test_simulate_deploy_account_skip_validation_and_fee;
 pub mod test_spec_version;
 pub mod test_syncing;
+pub mod test_deploy_account_v3;
 #[derive(Clone, Debug)]
 pub struct TestSuiteOpenRpc {
     pub random_paymaster_account: RandomSingleOwnerAccount,
