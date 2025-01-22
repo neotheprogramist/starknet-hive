@@ -41,6 +41,8 @@ pub mod test_declare_txn_v3;
 pub mod test_declare_v3_trace;
 pub mod test_deploy_account_outside_execution;
 pub mod test_deploy_account_trace;
+pub mod test_deploy_account_v1;
+pub mod test_deploy_account_v3;
 pub mod test_erc20_transfer_outside_execution;
 pub mod test_estimate_fee_fri;
 pub mod test_estimate_fee_wei;
