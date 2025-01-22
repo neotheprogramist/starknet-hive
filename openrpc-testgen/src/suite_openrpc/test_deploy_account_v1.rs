@@ -6,7 +6,7 @@ use crate::{
             call::Call,
             creation::create::{create_account, AccountType},
             deployment::{
-                deploy::{deploy_account, estimate_fee_deploy_account, DeployAccountVersion},
+                deploy::{deploy_account, DeployAccountVersion},
                 structs::{ValidatedWaitParams, WaitForTx},
             },
         },
