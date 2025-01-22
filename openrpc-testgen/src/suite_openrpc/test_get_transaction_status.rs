@@ -1,6 +1,6 @@
-use crate::utils::v7::accounts::account::{starknet_keccak, Account, ConnectedAccount};
+use crate::utils::v7::accounts::account::{Account, ConnectedAccount};
 use crate::utils::v7::endpoints::utils::wait_for_sent_transaction;
-use crate::utils::v7::providers::provider::{Provider, ProviderError};
+use crate::utils::v7::providers::provider::Provider;
 use crate::{assert_result, RandomizableAccountsTrait};
 use crate::{
     utils::v7::{
@@ -10,10 +10,7 @@ use crate::{
     RunnableTrait,
 };
 use starknet_types_core::felt::Felt;
-use starknet_types_rpc::{
-    BlockId, BlockTag, EventFilterWithPageRequest, MaybePendingBlockWithTxs, TxnExecutionStatus,
-    TxnStatus,
-};
+use starknet_types_rpc::{TxnExecutionStatus, TxnStatus};
 
 #[derive(Clone, Debug)]
 pub struct TestCase {}
