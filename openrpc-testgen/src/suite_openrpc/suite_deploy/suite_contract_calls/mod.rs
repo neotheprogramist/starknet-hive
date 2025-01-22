@@ -32,7 +32,7 @@ pub mod test_invoke_contract_v3;
 pub mod test_invoke_v3_trace;
 pub mod test_simulate_invoke_v3_skip_fee;
 pub mod test_simulate_invoke_v3_skip_validate_skip_fee;
-pub mod test_trace_block_txn;
+pub mod test_trace_block_txn_invoke;
 
 pub struct TestSuiteContractCalls {
     pub random_paymaster_account: RandomSingleOwnerAccount,
