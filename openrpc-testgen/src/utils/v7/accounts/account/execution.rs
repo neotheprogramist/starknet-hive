@@ -847,7 +847,6 @@ where
         query_only: bool,
         skip_signature: bool,
     ) -> Result<InvokeTxnV3<Felt>, A::SignError> {
-        let encoded_calls = self.account.encode_calls(&self.inner.calls);
         Ok(InvokeTxnV3 {
             // transaction_hash: self.inner.transaction_hash(self.account.chain_id()),
             sender_address: self.account.address(),
