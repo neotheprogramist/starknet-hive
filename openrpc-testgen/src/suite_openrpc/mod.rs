@@ -76,6 +76,7 @@ pub mod test_get_transaction_by_hash_invoke;
 // pub mod test_simulate_deploy_account_skip_validation_and_fee;
 // pub mod test_spec_version;
 // pub mod test_syncing;
+pub mod test_get_transaction_by_hash_error_txn_hash_not_found;
 #[derive(Clone, Debug)]
 pub struct TestSuiteOpenRpc {
     pub random_paymaster_account: RandomSingleOwnerAccount,
