@@ -128,8 +128,6 @@ impl RunnableTrait for TestCase {
             }
         };
 
-        println!("deploy_account_txn {:?}", deploy_account_txn);
-
         let expected_class_hash = test_input.account_class_hash;
         assert_result!(
             deploy_account_txn.class_hash == expected_class_hash,
