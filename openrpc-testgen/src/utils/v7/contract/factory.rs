@@ -4,7 +4,9 @@ use starknet_types_rpc::v0_7_1::{
 };
 
 use crate::utils::v7::accounts::{
-    account::{Account, AccountError, ConnectedAccount, ExecutionV1, ExecutionV3},
+    account::{
+        Account, AccountError, ConnectedAccount, ExecutionV1, ExecutionV3, PreparedExecutionV3,
+    },
     call::Call,
 };
 
@@ -290,6 +292,13 @@ where
     ) -> Result<AddInvokeTransactionResult<Felt>, AccountError<A::SignError>> {
         let execution: ExecutionV3<A> = self.into();
         execution.send().await
+    }
+
+    pub async fn prepare_execute(
+        &self,
+    ) -> Result<PreparedExecutionV3<'f, A>, AccountError<A::SignError>> {
+        let execution: ExecutionV3<A> = self.into();
+        execution.prepare().await
     }
 }
 

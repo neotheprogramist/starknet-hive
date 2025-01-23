@@ -13,6 +13,7 @@ use crate::{
     RunnableTrait,
 };
 use starknet_types_rpc::{DaMode, DeclareTxn, Txn};
+use t9n::txn_validation::declare::verify_declare_v3_signature;
 
 #[derive(Clone, Debug)]
 pub struct TestCase {}
@@ -33,9 +34,25 @@ impl RunnableTrait for TestCase {
 
         let sender = test_input.random_paymaster_account.random_accounts()?;
         let initial_sender_nonce = sender.get_nonce().await?;
-        let declaration_result = sender
+        let prepared_declaration_v3 = sender
             .declare_v3(flattened_sierra_class, compiled_class_hash)
-            .send()
+            .prepare()
+            .await?;
+
+        let declare_v3_request = prepared_declaration_v3
+            .get_declare_request(false, false)
+            .await?;
+
+        let (valid_signature, declare_tx_hash) = verify_declare_v3_signature(
+            &declare_v3_request,
+            None,
+            sender.provider().chain_id().await?.to_hex_string().as_str(),
+        )?;
+
+        let signature = declare_v3_request.clone().signature;
+
+        let declaration_result = prepared_declaration_v3
+            .send_from_request(declare_v3_request)
             .await?;
 
         wait_for_sent_transaction(
@@ -43,6 +60,14 @@ impl RunnableTrait for TestCase {
             &test_input.random_paymaster_account.random_accounts()?,
         )
         .await?;
+
+        assert_result!(
+            declaration_result.transaction_hash == declare_tx_hash,
+            format!(
+                "Exptected transaction hash to be {:?}, got {:?}",
+                declare_tx_hash, declaration_result.transaction_hash
+            )
+        );
 
         let txn = test_input
             .random_paymaster_account
@@ -98,6 +123,19 @@ impl RunnableTrait for TestCase {
                 "
             Expected nonce to be {:?}, but got {:?}",
                 initial_sender_nonce, txn.nonce
+            )
+        );
+
+        assert_result!(
+            valid_signature,
+            format!("Invalid signature, checked by t9n.",)
+        );
+
+        assert_result!(
+            txn.signature == signature,
+            format!(
+                "Expected signature: {:?}, got {:?}",
+                signature, txn.signature
             )
         );
 

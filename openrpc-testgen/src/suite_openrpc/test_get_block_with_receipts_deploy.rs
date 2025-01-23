@@ -17,9 +17,10 @@ use crate::{
 use rand::{rngs::StdRng, RngCore, SeedableRng};
 use starknet_types_core::felt::Felt;
 use starknet_types_rpc::{
-    BlockId, BlockStatus, BlockTag, DaMode, InvokeTxn, PriceUnit, TransactionAndReceipt, Txn,
-    TxnFinalityStatus, TxnReceipt,
+    BlockId, BlockStatus, BlockTag, BroadcastedInvokeTxn, BroadcastedTxn, DaMode, InvokeTxn,
+    PriceUnit, TransactionAndReceipt, Txn, TxnFinalityStatus, TxnReceipt,
 };
+use t9n::txn_validation::invoke::verify_invoke_v3_signature;
 
 const STRK_GAS_PRICE: Felt = Felt::from_hex_unchecked("0xa");
 const STRK_BLOB_GAS_PRICE: Felt = Felt::from_hex_unchecked("0x14");
@@ -51,7 +52,7 @@ impl RunnableTrait for TestCase {
         .await?;
 
         let sender = test_input.random_paymaster_account.random_accounts()?;
-        // let chain_id = sender.provider().chain_id().await?;
+        let chain_id = sender.provider().chain_id().await?;
 
         let declare_result = sender
             .declare_v3(flattened_sierra_class, compiled_class_hash)
@@ -78,11 +79,26 @@ impl RunnableTrait for TestCase {
             .estimate_fee()
             .await?;
 
-        let deploy_result = factory
+        let deploy_request = factory
             .deploy_v3(constructor_calldata.clone(), salt, unique)
             .gas(DEPLOY_TXN_GAS)
             .gas_price(DEPLOY_TXN_GAS_PRICE)
-            .send()
+            .prepare_execute()
+            .await?
+            .get_invoke_request(false, false)
+            .await?;
+
+        let signature = deploy_request.clone().signature;
+
+        let (valid_signature, deploy_hash) =
+            verify_invoke_v3_signature(&deploy_request, None, chain_id.to_hex_string().as_str())?;
+
+        let deploy_result = test_input
+            .random_paymaster_account
+            .provider()
+            .add_invoke_transaction(BroadcastedTxn::Invoke(BroadcastedInvokeTxn::V3(
+                deploy_request,
+            )))
             .await?;
 
         wait_for_sent_transaction(
@@ -90,6 +106,14 @@ impl RunnableTrait for TestCase {
             &test_input.random_paymaster_account.random_accounts()?,
         )
         .await?;
+
+        assert_result!(
+            deploy_result.transaction_hash == deploy_hash,
+            format!(
+                "Exptected transaction hash to be {:?}, got {:?}",
+                deploy_hash, deploy_result.transaction_hash
+            )
+        );
 
         let block_with_receipts = test_input
             .random_paymaster_account
@@ -400,19 +424,18 @@ impl RunnableTrait for TestCase {
             )
         );
 
-        // TODO: SIGNATURES
-        // assert_result!(
-        //     valid_signature,
-        //     format!("Invalid signature, checked by t9n.",)
-        // );
+        assert_result!(
+            valid_signature,
+            format!("Invalid signature, checked by t9n.",)
+        );
 
-        // assert_result!(
-        //     deploy_tx.signature == signature,
-        //     format!(
-        //         "Expected signature: {:?}, got {:?}",
-        //         signature, deploy_tx.signature
-        //     )
-        // );
+        assert_result!(
+            deploy_tx.signature == signature,
+            format!(
+                "Expected signature: {:?}, got {:?}",
+                signature, deploy_tx.signature
+            )
+        );
 
         assert_result!(
             deploy_receipt.common_receipt_properties.transaction_hash

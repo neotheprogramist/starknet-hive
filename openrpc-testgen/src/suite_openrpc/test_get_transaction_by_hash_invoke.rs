@@ -12,7 +12,7 @@ use crate::{
 };
 use starknet_types_core::felt::Felt;
 use starknet_types_rpc::{DaMode, InvokeTxn, Txn};
-
+use t9n::txn_validation::invoke::verify_invoke_v3_signature;
 #[derive(Clone, Debug)]
 pub struct TestCase {}
 
@@ -34,6 +34,20 @@ impl RunnableTrait for TestCase {
             selector,
             calldata: calldata.clone(),
         }];
+        let transfer_request = sender
+            .execute_v3(calls.clone())
+            .prepare()
+            .await?
+            .get_invoke_request(false, false)
+            .await?;
+        let signature = transfer_request.clone().signature;
+
+        let (valid_signature, transfer_hash) = verify_invoke_v3_signature(
+            &transfer_request,
+            None,
+            sender.provider().chain_id().await?.to_hex_string().as_str(),
+        )?;
+
         let transfer_execution = sender.execute_v3(calls.clone()).send().await?;
 
         wait_for_sent_transaction(
@@ -41,6 +55,14 @@ impl RunnableTrait for TestCase {
             &test_input.random_paymaster_account.random_accounts()?,
         )
         .await?;
+
+        assert_result!(
+            transfer_execution.transaction_hash == transfer_hash,
+            format!(
+                "Exptected transaction hash to be {:?}, got {:?}",
+                transfer_hash, transfer_execution.transaction_hash
+            )
+        );
 
         let txn = test_input
             .random_paymaster_account
@@ -159,6 +181,19 @@ impl RunnableTrait for TestCase {
             format!(
                 "Expected fee data availability mode to be {:?}, but got {:?}",
                 expected_fee_damode, txn.fee_data_availability_mode
+            )
+        );
+
+        assert_result!(
+            valid_signature,
+            format!("Invalid signature, checked by t9n.",)
+        );
+
+        assert_result!(
+            txn.signature == signature,
+            format!(
+                "Expected signature: {:?}, got {:?}",
+                signature, txn.signature
             )
         );
 

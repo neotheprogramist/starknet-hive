@@ -6,7 +6,10 @@ use crate::{
             call::Call,
             creation::create::{create_account, AccountType},
             deployment::{
-                deploy::{deploy_account, estimate_fee_deploy_account, DeployAccountVersion},
+                deploy::{
+                    deploy_account_v3_from_request, estimate_fee_deploy_account,
+                    get_deploy_v3_request, DeployAccountVersion,
+                },
                 structs::{ValidatedWaitParams, WaitForTx},
             },
         },
@@ -23,6 +26,7 @@ use starknet_types_rpc::{
     BlockId, BlockStatus, BlockTag, DaMode, DeployAccountTxn, PriceUnit, TransactionAndReceipt,
     Txn, TxnFinalityStatus, TxnReceipt,
 };
+use t9n::txn_validation::deploy_account::verify_deploy_account_v3_signature;
 
 const STRK_GAS_PRICE: Felt = Felt::from_hex_unchecked("0xa");
 const STRK_BLOB_GAS_PRICE: Felt = Felt::from_hex_unchecked("0x14");
@@ -84,20 +88,45 @@ impl RunnableTrait for TestCase {
         )
         .await?;
 
-        let deploy_account_hash = deploy_account(
+        let deploy_account_request = get_deploy_v3_request(
             test_input.random_paymaster_account.provider(),
             test_input.random_paymaster_account.chain_id(),
             wait_config,
             account_data,
-            DeployAccountVersion::V3,
+        )
+        .await?;
+
+        let signature = deploy_account_request.clone().signature;
+
+        let (is_valid_signature, deploy_hash) = verify_deploy_account_v3_signature(
+            &deploy_account_request,
+            None,
+            test_input
+                .random_paymaster_account
+                .chain_id()
+                .to_hex_string()
+                .as_str(),
+        )?;
+
+        let deploy_account_result = deploy_account_v3_from_request(
+            test_input.random_paymaster_account.provider(),
+            deploy_account_request,
         )
         .await?;
 
         wait_for_sent_transaction(
-            deploy_account_hash,
+            deploy_account_result.transaction_hash,
             &test_input.random_paymaster_account.random_accounts()?,
         )
         .await?;
+
+        assert_result!(
+            deploy_account_result.transaction_hash == deploy_hash,
+            format!(
+                "Invalid transaction hash, expected {:?}, got {:?}",
+                deploy_hash, deploy_account_result.transaction_hash
+            )
+        );
 
         let block_with_receipts = test_input
             .random_paymaster_account
@@ -138,7 +167,7 @@ impl RunnableTrait for TestCase {
         assert_result!(
             block_header.block_hash == block_hash_and_number.block_hash,
             format!(
-                "Expected block hash to be {}, but got {}.",
+                "Expected block hash to be {:?}, but got {:?}.",
                 block_header.block_hash, block_hash_and_number.block_hash
             )
         );
@@ -154,7 +183,7 @@ impl RunnableTrait for TestCase {
         assert_result!(
             block_header.l1_data_gas_price.price_in_fri == STRK_BLOB_GAS_PRICE,
             format!(
-                "Expected L1 data gas price in FRI to be {}, but got {}.",
+                "Expected L1 data gas price in FRI to be {:?}, but got {:?}.",
                 block_header.l1_data_gas_price.price_in_fri, STRK_BLOB_GAS_PRICE
             )
         );
@@ -162,7 +191,7 @@ impl RunnableTrait for TestCase {
         assert_result!(
             block_header.l1_data_gas_price.price_in_wei == BLOB_GAS_PRICE,
             format!(
-                "Expected L1 data gas price in WEI to be {}, but got {}.",
+                "Expected L1 data gas price in WEI to be {:?}, but got {:?}.",
                 block_header.l1_data_gas_price.price_in_wei, BLOB_GAS_PRICE
             )
         );
@@ -170,7 +199,7 @@ impl RunnableTrait for TestCase {
         assert_result!(
             block_header.l1_gas_price.price_in_fri == STRK_GAS_PRICE,
             format!(
-                "Expected L1 gas price in FRI to be {}, but got {}.",
+                "Expected L1 gas price in FRI to be {:?}, but got {:?}.",
                 block_header.l1_gas_price.price_in_fri, STRK_GAS_PRICE
             )
         );
@@ -178,7 +207,7 @@ impl RunnableTrait for TestCase {
         assert_result!(
             block_header.l1_gas_price.price_in_wei == GAS_PRICE,
             format!(
-                "Expected L1 gas price in WEI to be {}, but got {}.",
+                "Expected L1 gas price in WEI to be {:?}, but got {:?}.",
                 block_header.l1_gas_price.price_in_wei, GAS_PRICE
             )
         );
@@ -346,22 +375,20 @@ impl RunnableTrait for TestCase {
             )
         );
 
-        // TODO: SIGNATURES
-        // assert_result!(
-        //     valid_signature,
-        //     format!("Invalid signature, checked by t9n.",)
-        // );
+        assert_result!(
+            is_valid_signature,
+            "Invalid signature for deploy account request, checked by t9n."
+        );
 
-        // assert_result!(
-        //     deploy_tx.signature == signature,
-        //     format!(
-        //         "Expected signature: {:?}, got {:?}",
-        //         signature, deploy_tx.signature
-        //     )
-        // );
+        assert_result!(
+            deploy_account_tx.signature == signature,
+            format!(
+                "Expected signature: {:?}, got {:?}",
+                signature, deploy_account_tx.signature
+            )
+        );
 
         // Deploy Account receipt
-
         let actual_fee = deploy_account_receipt
             .common_receipt_properties
             .actual_fee
@@ -463,7 +490,7 @@ impl RunnableTrait for TestCase {
         assert_result!(
             second_event_data_first == estimate_fee.overall_fee,
             format!(
-                "Invalid fee amount in event data, expected {}, got {:?}",
+                "Invalid fee amount in event data, expected {:?}, got {:?}",
                 estimate_fee.overall_fee, second_event_data_first
             )
         );
@@ -476,7 +503,7 @@ impl RunnableTrait for TestCase {
         assert_result!(
             second_event_data_second == Felt::ZERO,
             format!(
-                "Invalid fee amount in event data, expected {}, got {:?}",
+                "Invalid fee amount in event data, expected {:?}, got {:?}",
                 Felt::ZERO,
                 second_event_data_second
             )
@@ -490,7 +517,7 @@ impl RunnableTrait for TestCase {
         assert_result!(
             second_event_keys_first == keccak_transfer,
             format!(
-                "Invalid keccak transfer in event keys, expected {}, got {:?}",
+                "Invalid keccak transfer in event keys, expected {:?}, got {:?}",
                 keccak_transfer, second_event_keys_first
             )
         );
@@ -502,7 +529,7 @@ impl RunnableTrait for TestCase {
         assert_result!(
             second_event_keys_second == account_data.address,
             format!(
-                "Invalid sender address in event keys, expected {}, got {:?}",
+                "Invalid sender address in event keys, expected {:?}, got {:?}",
                 account_data.address, second_event_keys_second
             )
         );
@@ -514,7 +541,7 @@ impl RunnableTrait for TestCase {
         assert_result!(
             second_event_keys_third == SEQUENCER_ADDRESS,
             format!(
-                "Invalid sequencer address in event keys, expected {}, got {:?}",
+                "Invalid sequencer address in event keys, expected {:?}, got {:?}",
                 SEQUENCER_ADDRESS, second_event_keys_third
             )
         );
@@ -545,10 +572,10 @@ impl RunnableTrait for TestCase {
             deploy_account_receipt
                 .common_receipt_properties
                 .transaction_hash
-                == deploy_account_hash,
+                == deploy_account_result.transaction_hash,
             format!(
-                "Invalid transaction hash, expected {}, got {}",
-                deploy_account_hash,
+                "Invalid transaction hash, expected {:?}, got {:?}",
+                deploy_account_result.transaction_hash,
                 deploy_account_receipt
                     .common_receipt_properties
                     .transaction_hash

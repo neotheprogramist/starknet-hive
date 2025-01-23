@@ -46,7 +46,7 @@ impl RunnableTrait for TestCase {
         let prepared_execution_v3 = test_input
             .random_paymaster_account
             .execute_v3(vec![increase_balance_call])
-            .prepare_without_send()
+            .prepare()
             .await?;
 
         let invoke_request = prepared_execution_v3

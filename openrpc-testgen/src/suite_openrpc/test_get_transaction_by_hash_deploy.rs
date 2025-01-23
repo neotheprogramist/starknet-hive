@@ -16,7 +16,8 @@ use crate::{
 use rand::rngs::StdRng;
 use rand::{RngCore, SeedableRng};
 use starknet_types_core::felt::Felt;
-use starknet_types_rpc::{DaMode, InvokeTxn, Txn};
+use starknet_types_rpc::{BroadcastedInvokeTxn, BroadcastedTxn, DaMode, InvokeTxn, Txn};
+use t9n::txn_validation::invoke::verify_invoke_v3_signature;
 
 const UDC_ADDRESS: Felt =
     Felt::from_hex_unchecked("0x041a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf");
@@ -61,21 +62,47 @@ impl RunnableTrait for TestCase {
 
         let sender_nonce = deployer_account.get_nonce().await?;
 
-        let deploy_result = factory
+        let deploy_request = factory
             .deploy_v3(constructor_calldata.clone(), salt, unique)
-            .send()
-            .await;
+            .prepare_execute()
+            .await?
+            .get_invoke_request(false, false)
+            .await?;
+
+        let signature = deploy_request.clone().signature;
+        let (valid_signature, deploy_hash) = verify_invoke_v3_signature(
+            &deploy_request,
+            None,
+            deployer_account
+                .provider()
+                .chain_id()
+                .await?
+                .to_hex_string()
+                .as_str(),
+        )?;
+
+        let deploy_result = test_input
+            .random_paymaster_account
+            .provider()
+            .add_invoke_transaction(BroadcastedTxn::Invoke(BroadcastedInvokeTxn::V3(
+                deploy_request,
+            )))
+            .await?;
 
         wait_for_sent_transaction(
-            deploy_result.as_ref().unwrap().transaction_hash,
+            deploy_result.transaction_hash,
             &test_input.random_paymaster_account.random_accounts()?,
         )
         .await?;
 
-        let result = deploy_result.is_ok();
-        assert_result!(result);
+        assert_result!(
+            deploy_result.transaction_hash == deploy_hash,
+            format!(
+                "Exptected transaction hash to be {:?}, got {:?}",
+                deploy_hash, deploy_result.transaction_hash
+            )
+        );
 
-        let deploy_result = deploy_result?;
         let txn = test_input
             .random_paymaster_account
             .provider()
@@ -214,6 +241,19 @@ impl RunnableTrait for TestCase {
             format!(
                 "Expected fee data availability mode to be {:#?}, got {:#?}",
                 expected_fee_damode, txn.fee_data_availability_mode
+            )
+        );
+
+        assert_result!(
+            valid_signature,
+            format!("Invalid signature, checked by t9n.",)
+        );
+
+        assert_result!(
+            txn.signature == signature,
+            format!(
+                "Expected signature: {:?}, got {:?}",
+                signature, txn.signature
             )
         );
 
