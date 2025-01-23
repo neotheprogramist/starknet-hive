@@ -380,13 +380,9 @@ where
         self.prepare().await?.send().await
     }
 
-    pub async fn prepare_without_send(
+    pub async fn prepare(
         &self,
     ) -> Result<PreparedDeclarationV3<'a, A>, AccountError<A::SignError>> {
-        self.prepare().await
-    }
-
-    async fn prepare(&self) -> Result<PreparedDeclarationV3<'a, A>, AccountError<A::SignError>> {
         // Resolves nonce
         let nonce = match self.nonce {
             Some(value) => value,
