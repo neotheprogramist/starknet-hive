@@ -1,6 +1,7 @@
 use starknet_types_core::felt::Felt;
 use starknet_types_rpc::{
     v0_7_1::{BlockId, BlockTag, TxnHash},
+    BroadcastedDeployAccountTxn, BroadcastedTxn, ContractAndTxnHash, DeployAccountTxnV3,
     FeeEstimate, SimulateTransactionsResult,
 };
 
@@ -18,8 +19,8 @@ use crate::utils::v7::{
 
 use super::{
     helpers::{
-        get_contract_address, get_deployment_result, get_estimate_fee_deployment_result,
-        simulate_get_deployment_result,
+        get_contract_address, get_deployment_result, get_deployment_v3_request,
+        get_estimate_fee_deployment_result, simulate_get_deployment_result,
     },
     structs::WaitForTx,
 };
@@ -125,4 +126,35 @@ pub async fn estimate_fee_deploy_account(
         version,
     )
     .await
+}
+
+pub async fn get_deploy_v3_request(
+    provider: &JsonRpcClient<HttpTransport>,
+    chain_id: Felt,
+    wait_config: WaitForTx,
+    account_data: GenerateAccountResponse,
+) -> Result<DeployAccountTxnV3<Felt>, CreationError> {
+    get_deployment_v3_request(
+        provider,
+        account_data.account_type,
+        account_data.class_hash,
+        account_data.signing_key,
+        account_data.salt,
+        chain_id,
+        Some(account_data.max_fee),
+        wait_config,
+    )
+    .await
+}
+
+pub async fn deploy_account_v3_from_request(
+    provider: &JsonRpcClient<HttpTransport>,
+    tx_request: DeployAccountTxnV3<Felt>,
+) -> Result<ContractAndTxnHash<Felt>, CreationError> {
+    provider
+        .add_deploy_account_transaction(BroadcastedTxn::DeployAccount(
+            BroadcastedDeployAccountTxn::V3(tx_request),
+        ))
+        .await
+        .map_err(CreationError::from)
 }

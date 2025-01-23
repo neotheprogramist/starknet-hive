@@ -840,7 +840,6 @@ where
 
     // The `simulate` function is temporarily removed until it's supported in [Provider]
     // TODO: add `simulate` back once transaction simulation in supported
-    // async fn simulate(&self, )
 
     pub async fn get_invoke_request(
         &self,

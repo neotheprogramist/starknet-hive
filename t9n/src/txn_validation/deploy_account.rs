@@ -22,7 +22,7 @@ pub fn verify_deploy_account_signature(
     }
 }
 
-fn verify_deploy_account_v1_signature(
+pub fn verify_deploy_account_v1_signature(
     txn: &DeployAccountTxnV1<Felt>,
     public_key: Option<&str>,
     chain_id_input: &str,
@@ -45,7 +45,7 @@ fn verify_deploy_account_v1_signature(
     }
 }
 
-fn verify_deploy_account_v3_signature(
+pub fn verify_deploy_account_v3_signature(
     txn: &DeployAccountTxnV3<Felt>,
     public_key: Option<&str>,
     chain_id_input: &str,
