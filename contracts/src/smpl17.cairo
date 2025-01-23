@@ -12,7 +12,7 @@ mod HelloStarknet {
     struct Storage {
         balance: felt252,
         balances: Map<felt252, felt252>,
-        another_arg7: felt252,
+        another_arg8: felt252,
     }
 
     #[event]

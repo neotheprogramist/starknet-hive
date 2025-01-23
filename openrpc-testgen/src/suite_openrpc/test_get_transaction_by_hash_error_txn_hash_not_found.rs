@@ -1,8 +1,12 @@
 use crate::{
-    assert_result,
+    assert_matches_result, assert_result,
     utils::v7::{
-        accounts::account::ConnectedAccount, endpoints::errors::OpenRpcTestGenError,
-        providers::provider::Provider,
+        accounts::account::ConnectedAccount,
+        endpoints::errors::OpenRpcTestGenError,
+        providers::{
+            jsonrpc::StarknetError,
+            provider::{Provider, ProviderError},
+        },
     },
     RunnableTrait,
 };
@@ -22,8 +26,12 @@ impl RunnableTrait for TestCase {
             .await;
 
         let result = txn.is_err();
-
         assert_result!(result);
+
+        assert_matches_result!(
+            txn.unwrap_err(),
+            ProviderError::StarknetError(StarknetError::TransactionHashNotFound)
+        );
 
         Ok(Self {})
     }

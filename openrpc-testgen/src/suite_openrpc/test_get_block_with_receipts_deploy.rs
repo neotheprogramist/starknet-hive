@@ -289,6 +289,18 @@ impl RunnableTrait for TestCase {
             )
         );
 
+        let calldata_fourth = *deploy_calldata.get(3).ok_or_else(|| {
+            OpenRpcTestGenError::Other("Missing last calldata element".to_string())
+        })?;
+        let expected_calldata_call_length = Felt::from_hex("0x4")?;
+        assert_result!(
+            calldata_fourth == expected_calldata_call_length,
+            format!(
+                "Expected fourth calldata element to be {:#?}, got {:#?}",
+                expected_calldata_call_length, calldata_fourth
+            )
+        );
+
         let deploy_calldata_class_hash = *deploy_calldata
             .get(4)
             .ok_or_else(|| OpenRpcTestGenError::Other("Missing calldata".to_string()))?;
