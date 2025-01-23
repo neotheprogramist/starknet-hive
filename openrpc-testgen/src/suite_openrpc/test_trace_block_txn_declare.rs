@@ -44,7 +44,7 @@ impl RunnableTrait for TestCase {
         let prepared_declare = test_input
             .random_paymaster_account
             .declare_v3(flattened_sierra_class.clone(), compiled_class_hash)
-            .prepare_without_send()
+            .prepare()
             .await?;
 
         let declare_request = prepared_declare.get_declare_request(false, false).await?;
