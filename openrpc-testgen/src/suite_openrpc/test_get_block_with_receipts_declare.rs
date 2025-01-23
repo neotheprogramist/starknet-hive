@@ -59,7 +59,7 @@ impl RunnableTrait for TestCase {
             .declare_v3(flattened_sierra_class, compiled_class_hash)
             .gas(DECLARE_TXN_GAS)
             .gas_price(DECLARE_TXN_GAS_PRICE)
-            .prepare_without_send()
+            .prepare()
             .await?;
 
         let declare_v3_request = prepared_declaration_v3
@@ -83,6 +83,14 @@ impl RunnableTrait for TestCase {
             &test_input.random_paymaster_account.random_accounts()?,
         )
         .await?;
+
+        assert_result!(
+            class_and_tx_hash.transaction_hash == declare_tx_hash,
+            format!(
+                "Exptected transaction hash to be {:?}, got {:?}",
+                declare_tx_hash, class_and_tx_hash.transaction_hash
+            )
+        );
 
         let block_hash_and_number = test_input
             .random_paymaster_account
@@ -449,14 +457,6 @@ impl RunnableTrait for TestCase {
                 .messages_sent
                 .is_empty(),
             "Expected messages sent to be empty."
-        );
-
-        assert_result!(
-            declare_receipt.common_receipt_properties.transaction_hash == declare_tx_hash,
-            format!(
-                "Exptected transaction hash to be {:?}, got {:?}",
-                declare_tx_hash, declare_receipt.common_receipt_properties.transaction_hash
-            )
         );
 
         let execution_status = match declare_receipt.common_receipt_properties.anon.clone() {

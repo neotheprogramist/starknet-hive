@@ -15,9 +15,10 @@ use crate::{
 };
 use starknet_types_core::felt::Felt;
 use starknet_types_rpc::{
-    BlockId, BlockStatus, BlockTag, DaMode, InvokeTxn, PriceUnit, TransactionAndReceipt, Txn,
-    TxnFinalityStatus, TxnReceipt,
+    BlockId, BlockStatus, BlockTag, BroadcastedInvokeTxn, BroadcastedTxn, DaMode, InvokeTxn,
+    PriceUnit, TransactionAndReceipt, Txn, TxnFinalityStatus, TxnReceipt,
 };
+use t9n::txn_validation::invoke::verify_invoke_v3_signature;
 
 const STRK_GAS_PRICE: Felt = Felt::from_hex_unchecked("0xa");
 const STRK_BLOB_GAS_PRICE: Felt = Felt::from_hex_unchecked("0x14");
@@ -55,13 +56,30 @@ impl RunnableTrait for TestCase {
             .estimate_fee()
             .await?;
 
-        let invoke_result = sender
+        let invoke_request = sender
             .execute_v3(vec![Call {
                 to: ETH_ADDRESS,
                 selector: get_selector_from_name("transfer")?,
                 calldata: transfer_calldata.clone(),
             }])
-            .send()
+            .prepare()
+            .await?
+            .get_invoke_request(false, false)
+            .await?;
+
+        let signature = invoke_request.clone().signature;
+
+        let (valid_signature, invoke_hash) = verify_invoke_v3_signature(
+            &invoke_request,
+            None,
+            sender.provider().chain_id().await?.to_hex_string().as_str(),
+        )?;
+
+        let invoke_result = sender
+            .provider()
+            .add_invoke_transaction(BroadcastedTxn::Invoke(BroadcastedInvokeTxn::V3(
+                invoke_request,
+            )))
             .await?;
 
         wait_for_sent_transaction(
@@ -69,6 +87,14 @@ impl RunnableTrait for TestCase {
             &test_input.random_paymaster_account.random_accounts()?,
         )
         .await?;
+
+        assert_result!(
+            invoke_result.transaction_hash == invoke_hash,
+            format!(
+                "Exptected transaction hash to be {:?}, got {:?}",
+                invoke_hash, invoke_result.transaction_hash
+            )
+        );
 
         let block_with_receipts = test_input
             .random_paymaster_account
@@ -335,29 +361,28 @@ impl RunnableTrait for TestCase {
             )
         );
 
-        // // TODO: SIGNATURES
-        // // assert_result!(
-        // //     valid_signature,
-        // //     format!("Invalid signature, checked by t9n.",)
-        // // );
+        assert_result!(
+            valid_signature,
+            format!("Invalid signature, checked by t9n.",)
+        );
 
-        // // assert_result!(
-        // //     deploy_tx.signature == signature,
-        // //     format!(
-        // //         "Expected signature: {:?}, got {:?}",
-        // //         signature, deploy_tx.signature
-        // //     )
-        // // );
+        assert_result!(
+            invoke_tx.signature == signature,
+            format!(
+                "Expected signature: {:?}, got {:?}",
+                signature, invoke_tx.signature
+            )
+        );
 
-        // assert_result!(
-        //     invoke_receipt.common_receipt_properties.transaction_hash
-        //         == deploy_result.transaction_hash,
-        //     format!(
-        //         "Expected declare transaction hash: {:?}, but got {:?}",
-        //         deploy_result.transaction_hash,
-        //         invoke_receipt.common_receipt_properties.transaction_hash
-        //     )
-        // );
+        assert_result!(
+            invoke_receipt.common_receipt_properties.transaction_hash
+                == invoke_result.transaction_hash,
+            format!(
+                "Expected declare transaction hash: {:?}, but got {:?}",
+                invoke_result.transaction_hash,
+                invoke_receipt.common_receipt_properties.transaction_hash
+            )
+        );
 
         let expected_tip = Felt::ZERO;
         assert_result!(
