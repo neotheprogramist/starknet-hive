@@ -64,6 +64,7 @@ pub mod test_get_nonce;
 pub mod test_get_state_update;
 pub mod test_get_transaction_by_hash_declare;
 pub mod test_get_transaction_by_hash_deploy;
+pub mod test_get_transaction_by_hash_deploy_account;
 pub mod test_get_transaction_by_hash_error_txn_hash_not_found;
 pub mod test_get_transaction_by_hash_invoke;
 pub mod test_get_transaction_status;
