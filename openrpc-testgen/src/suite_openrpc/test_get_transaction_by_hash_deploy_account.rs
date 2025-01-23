@@ -1,7 +1,9 @@
 use crate::utils::v7::accounts::account::Account;
 use crate::utils::v7::accounts::call::Call;
 use crate::utils::v7::accounts::creation::create::{create_account, AccountType};
-use crate::utils::v7::accounts::deployment::deploy::{deploy_account, DeployAccountVersion};
+use crate::utils::v7::accounts::deployment::deploy::{
+    deploy_account_v3_from_request, get_deploy_v3_request,
+};
 use crate::utils::v7::accounts::deployment::structs::{ValidatedWaitParams, WaitForTx};
 use crate::utils::v7::endpoints::utils::{get_selector_from_name, wait_for_sent_transaction};
 use crate::{assert_result, RandomizableAccountsTrait};
@@ -14,6 +16,7 @@ use crate::{
 };
 use starknet_types_core::felt::Felt;
 use starknet_types_rpc::{DaMode, DeployAccountTxn, Txn};
+use t9n::txn_validation::deploy_account::verify_deploy_account_v3_signature;
 
 const DEPLOY_ACCOUNT_TXN_GAS: u64 = 886;
 const DEPLOY_ACCOUNT_TXN_GAS_PRICE: u128 = 15;
@@ -58,25 +61,50 @@ impl RunnableTrait for TestCase {
             wait_params: ValidatedWaitParams::default(),
         };
 
-        let deploy_account_hash = deploy_account(
+        let deploy_account_request = get_deploy_v3_request(
             test_input.random_paymaster_account.provider(),
             test_input.random_paymaster_account.chain_id(),
             wait_config,
             account_data,
-            DeployAccountVersion::V3,
+        )
+        .await?;
+
+        let signature = deploy_account_request.clone().signature;
+
+        let (is_valid_signature, deploy_hash) = verify_deploy_account_v3_signature(
+            &deploy_account_request,
+            None,
+            test_input
+                .random_paymaster_account
+                .chain_id()
+                .to_hex_string()
+                .as_str(),
+        )?;
+
+        let deploy_account_result = deploy_account_v3_from_request(
+            test_input.random_paymaster_account.provider(),
+            deploy_account_request,
         )
         .await?;
 
         wait_for_sent_transaction(
-            deploy_account_hash,
+            deploy_account_result.transaction_hash,
             &test_input.random_paymaster_account.random_accounts()?,
         )
         .await?;
 
+        assert_result!(
+            deploy_account_result.transaction_hash == deploy_hash,
+            format!(
+                "Invalid transaction hash, expected {:?}, got {:?}",
+                deploy_hash, deploy_account_result.transaction_hash
+            )
+        );
+
         let txn = test_input
             .random_paymaster_account
             .provider()
-            .get_transaction_by_hash(deploy_account_hash)
+            .get_transaction_by_hash(deploy_account_result.transaction_hash)
             .await;
 
         let result = txn.is_ok();
@@ -153,6 +181,19 @@ impl RunnableTrait for TestCase {
             format!(
                 "Expected fee data availability mode to be {:?}, but got {:?}.",
                 expected_fee_damode, txn.fee_data_availability_mode
+            )
+        );
+
+        assert_result!(
+            is_valid_signature,
+            "Invalid signature for deploy account request, checked by t9n."
+        );
+
+        assert_result!(
+            txn.signature == signature,
+            format!(
+                "Expected signature: {:?}, got {:?}",
+                signature, txn.signature
             )
         );
 
