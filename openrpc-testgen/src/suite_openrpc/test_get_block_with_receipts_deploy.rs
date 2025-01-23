@@ -474,7 +474,7 @@ impl RunnableTrait for TestCase {
             )
         );
 
-        // // Declare receipt
+        // Deploy receipt
         let actual_fee = deploy_receipt.common_receipt_properties.actual_fee.clone();
 
         assert_result!(
