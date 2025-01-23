@@ -25,7 +25,7 @@ pub mod test_get_storage_at;
 pub mod test_get_storage_at_map;
 pub mod test_get_txn_by_block_id_and_index_invoke_v1;
 pub mod test_get_txn_by_block_id_and_index_invoke_v3;
-pub mod test_get_txn_receipt;
+pub mod test_get_txn_receipt_invoke;
 pub mod test_get_txn_status;
 pub mod test_invoke_contract_v1;
 pub mod test_invoke_contract_v3;

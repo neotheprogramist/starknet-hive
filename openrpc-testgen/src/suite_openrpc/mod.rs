@@ -73,6 +73,8 @@ pub mod test_get_txn_by_block_id_and_index_declare_v2;
 pub mod test_get_txn_by_block_id_and_index_declare_v3;
 pub mod test_get_txn_by_block_id_and_index_deploy_account_v1;
 pub mod test_get_txn_by_block_id_and_index_deploy_account_v3;
+pub mod test_get_txn_receipt_declare;
+pub mod test_get_txn_receipt_deploy_account;
 pub mod test_simulate_declare_v3_skip_fee;
 pub mod test_simulate_declare_v3_skip_validate_skip_fee;
 pub mod test_simulate_deploy_account_skip_fee_charge;
