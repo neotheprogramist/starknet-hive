@@ -6,7 +6,10 @@ use crate::{
             call::Call,
             creation::create::{create_account, AccountType},
             deployment::{
-                deploy::{deploy_account_v3_from_request, get_deploy_account_request, DeployAccountVersion},
+                deploy::{
+                    deploy_account_v3_from_request, get_deploy_account_request,
+                    DeployAccountVersion,
+                },
                 structs::{ValidatedWaitParams, WaitForTx},
             },
         },
@@ -20,7 +23,8 @@ use crate::{
 };
 use starknet_types_core::felt::Felt;
 use starknet_types_rpc::{
-    BlockId, BlockTag, DeployAccountTransactionTrace, DeployAccountTxn, EntryPointType, TraceBlockTransactionsResult, TransactionTrace
+    BlockId, BlockTag, DeployAccountTransactionTrace, DeployAccountTxn, EntryPointType,
+    TraceBlockTransactionsResult, TransactionTrace,
 };
 use t9n::txn_validation::deploy_account::verify_deploy_account_v3_signature;
 

@@ -5,7 +5,8 @@ use starknet_types_rpc::v0_7_1::{
 
 use crate::utils::v7::accounts::{
     account::{
-        Account, AccountError, ConnectedAccount, ExecutionV1, ExecutionV3, PreparedExecutionV1, PreparedExecutionV3
+        Account, AccountError, ConnectedAccount, ExecutionV1, ExecutionV3, PreparedExecutionV1,
+        PreparedExecutionV3,
     },
     call::Call,
 };
