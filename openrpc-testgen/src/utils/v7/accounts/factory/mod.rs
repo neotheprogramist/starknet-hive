@@ -366,7 +366,7 @@ where
         self.prepare().await?.send().await
     }
 
-    async fn prepare(
+    pub async fn prepare(
         &self,
     ) -> Result<PreparedAccountDeploymentV1<'f, F>, AccountFactoryError<F::SignError>> {
         // Resolves nonce
