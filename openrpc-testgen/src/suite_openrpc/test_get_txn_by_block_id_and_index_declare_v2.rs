@@ -13,6 +13,7 @@ use crate::{
 use starknet_types_core::felt::Felt;
 use starknet_types_rpc::{BlockId, DeclareTxn, MaybePendingBlockWithTxs, Txn};
 use std::{path::PathBuf, str::FromStr, sync::Arc};
+use t9n::txn_validation::declare::verify_declare_v2_signature;
 
 const EXPECTED_MAX_FEE: Felt = Felt::from_hex_unchecked("0xfbee6");
 
@@ -36,9 +37,26 @@ impl RunnableTrait for TestCase {
         let sender = test_input.random_paymaster_account.random_accounts()?;
         let sender_nonce = sender.get_nonce().await?;
         let sender_address = sender.address();
-        let declaration_result = sender
+
+        let prepared_declaration = sender
             .declare_v2(Arc::new(flattened_sierra_class), compiled_class_hash)
-            .send()
+            .prepare()
+            .await?;
+
+        let declaration_request = prepared_declaration
+            .get_declare_request(false, false)
+            .await?;
+
+        let (valid_signature, declare_hash) = verify_declare_v2_signature(
+            &declaration_request,
+            None,
+            sender.provider().chain_id().await?.to_hex_string().as_str(),
+        )?;
+
+        let signature = declaration_request.clone().signature;
+
+        let declaration_result = prepared_declaration
+            .send_from_request(declaration_request)
             .await?;
 
         wait_for_sent_transaction(
@@ -46,6 +64,14 @@ impl RunnableTrait for TestCase {
             &test_input.random_paymaster_account.random_accounts()?,
         )
         .await?;
+
+        assert_result!(
+            declaration_result.transaction_hash == declare_hash,
+            format!(
+                "Invalid transaction hash, expected {:?}, got {:?}",
+                declare_hash, declaration_result.transaction_hash
+            )
+        );
 
         let block_hash = test_input
             .random_paymaster_account
@@ -140,6 +166,19 @@ impl RunnableTrait for TestCase {
             format!(
                 "Expected txn sender address to be {:?} but got {:?}",
                 sender_address, txn.sender_address
+            )
+        );
+
+        assert_result!(
+            valid_signature,
+            format!("Invalid signature, checked by t9n.",)
+        );
+
+        assert_result!(
+            txn.signature == signature,
+            format!(
+                "Expected signature: {:?}, got {:?}",
+                signature, txn.signature
             )
         );
 

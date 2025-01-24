@@ -5,7 +5,8 @@ use starknet_types_rpc::v0_7_1::{
 
 use crate::utils::v7::accounts::{
     account::{
-        Account, AccountError, ConnectedAccount, ExecutionV1, ExecutionV3, PreparedExecutionV3,
+        Account, AccountError, ConnectedAccount, ExecutionV1, ExecutionV3, PreparedExecutionV1,
+        PreparedExecutionV3,
     },
     call::Call,
 };
@@ -258,6 +259,13 @@ where
     ) -> Result<SimulateTransactionsResult<Felt>, AccountError<A::SignError>> {
         let execution: ExecutionV1<A> = self.into();
         execution.simulate(skip_validate, skip_fee_charge).await
+    }
+
+    pub async fn prepare_execute(
+        &self,
+    ) -> Result<PreparedExecutionV1<'f, A>, AccountError<A::SignError>> {
+        let execution: ExecutionV1<A> = self.into();
+        execution.prepare().await
     }
 
     pub async fn send(

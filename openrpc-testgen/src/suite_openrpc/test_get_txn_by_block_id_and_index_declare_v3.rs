@@ -43,7 +43,7 @@ impl RunnableTrait for TestCase {
             .get_declare_request(false, false)
             .await?;
 
-        let (valid_signature, _) = verify_declare_v3_signature(
+        let (valid_signature, declare_hash) = verify_declare_v3_signature(
             &declare_v3_request,
             None,
             sender.provider().chain_id().await?.to_hex_string().as_str(),
@@ -60,6 +60,14 @@ impl RunnableTrait for TestCase {
             &test_input.random_paymaster_account.random_accounts()?,
         )
         .await?;
+
+        assert_result!(
+            declaration_result.transaction_hash == declare_hash,
+            format!(
+                "Invalid transaction hash, expected {:?}, got {:?}",
+                declare_hash, declaration_result.transaction_hash
+            )
+        );
 
         let block_hash = test_input
             .random_paymaster_account

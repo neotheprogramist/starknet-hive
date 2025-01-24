@@ -1,6 +1,6 @@
 use crypto_utils::curve::signer::compute_hash_on_elements;
 use starknet_types_core::felt::Felt;
-use starknet_types_rpc::{DeployAccountTxnV3, FeeEstimate, SimulateTransactionsResult};
+use starknet_types_rpc::{DeployAccountTxn, FeeEstimate, SimulateTransactionsResult};
 
 use crate::utils::v7::{
     self,
@@ -250,7 +250,7 @@ async fn estimate_fee_deploy_oz_account(
 }
 
 #[allow(clippy::too_many_arguments)]
-pub async fn get_deployment_v3_request(
+pub async fn get_deployment_request(
     provider: &JsonRpcClient<HttpTransport>,
     account_type: AccountType,
     class_hash: Felt,
@@ -259,7 +259,8 @@ pub async fn get_deployment_v3_request(
     chain_id: Felt,
     max_fee: Option<Felt>,
     wait_config: WaitForTx,
-) -> Result<DeployAccountTxnV3<Felt>, CreationError> {
+    version: DeployAccountVersion,
+) -> Result<DeployAccountTxn<Felt>, CreationError> {
     let factory = OpenZeppelinAccountFactory::new(
         class_hash,
         chain_id,
@@ -270,7 +271,16 @@ pub async fn get_deployment_v3_request(
     .unwrap();
     match account_type {
         AccountType::Oz => {
-            deploy_acc_request_v3(factory, provider, salt, max_fee, wait_config, class_hash).await
+            deploy_acc_request(
+                factory,
+                provider,
+                salt,
+                max_fee,
+                wait_config,
+                class_hash,
+                version,
+            )
+            .await
         }
     }
 }
@@ -383,24 +393,42 @@ where
 
 #[allow(clippy::too_many_arguments)]
 #[allow(unused_variables)]
-async fn deploy_acc_request_v3<T>(
+async fn deploy_acc_request<T>(
     account_factory: T,
     provider: &JsonRpcClient<HttpTransport>,
     salt: Felt,
     max_fee: Option<Felt>,
     wait_config: WaitForTx,
     class_hash: Felt,
-) -> Result<DeployAccountTxnV3<Felt>, CreationError>
+    version: DeployAccountVersion,
+) -> Result<DeployAccountTxn<Felt>, CreationError>
 where
     T: AccountFactory + Sync,
     v7::accounts::errors::CreationError:
         From<<T as v7::accounts::factory::AccountFactory>::SignError>,
 {
-    let deployment: crate::utils::v7::accounts::factory::AccountDeploymentV3<'_, T> =
-        account_factory.deploy_v3(salt);
-    Ok(deployment
-        .prepare()
-        .await?
-        .get_deploy_request(false, false)
-        .await?)
+    match version {
+        DeployAccountVersion::V1 => {
+            let deployment: crate::utils::v7::accounts::factory::AccountDeploymentV1<'_, T> =
+                account_factory.deploy_v1(salt);
+            Ok(DeployAccountTxn::V1(
+                deployment
+                    .prepare()
+                    .await?
+                    .get_deploy_request(false, false)
+                    .await?,
+            ))
+        }
+        DeployAccountVersion::V3 => {
+            let deployment: crate::utils::v7::accounts::factory::AccountDeploymentV3<'_, T> =
+                account_factory.deploy_v3(salt);
+            Ok(DeployAccountTxn::V3(
+                deployment
+                    .prepare()
+                    .await?
+                    .get_deploy_request(false, false)
+                    .await?,
+            ))
+        }
+    }
 }

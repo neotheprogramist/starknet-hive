@@ -6,7 +6,10 @@ use crate::{
             call::Call,
             creation::create::{create_account, AccountType},
             deployment::{
-                deploy::{deploy_account, DeployAccountVersion},
+                deploy::{
+                    deploy_account_v1_from_request, get_deploy_account_request,
+                    DeployAccountVersion,
+                },
                 structs::{ValidatedWaitParams, WaitForTx},
             },
         },
@@ -20,6 +23,7 @@ use crate::{
 };
 use starknet_types_core::felt::Felt;
 use starknet_types_rpc::{BlockId, DeployAccountTxn, MaybePendingBlockWithTxs, Txn};
+use t9n::txn_validation::deploy_account::verify_deploy_account_v1_signature;
 
 const EXPECTED_MAX_FEE: Felt = Felt::from_hex_unchecked("0x336f");
 #[derive(Clone, Debug)]
@@ -62,7 +66,7 @@ impl RunnableTrait for TestCase {
             wait_params: ValidatedWaitParams::default(),
         };
 
-        let deploy_account_hash = deploy_account(
+        let txn_req = get_deploy_account_request(
             test_input.random_paymaster_account.provider(),
             test_input.random_paymaster_account.chain_id(),
             wait_config,
@@ -71,11 +75,47 @@ impl RunnableTrait for TestCase {
         )
         .await?;
 
+        let deploy_account_request = match txn_req {
+            DeployAccountTxn::V1(txn_req) => txn_req,
+            _ => {
+                return Err(OpenRpcTestGenError::UnexpectedTxnType(format!(
+                    "Unexpected transaction request type: {:?}",
+                    txn_req
+                )));
+            }
+        };
+
+        let signature = deploy_account_request.clone().signature;
+
+        let (is_valid_signature, deploy_hash) = verify_deploy_account_v1_signature(
+            &deploy_account_request,
+            None,
+            test_input
+                .random_paymaster_account
+                .chain_id()
+                .to_hex_string()
+                .as_str(),
+        )?;
+
+        let deploy_account_result = deploy_account_v1_from_request(
+            test_input.random_paymaster_account.provider(),
+            deploy_account_request,
+        )
+        .await?;
+
         wait_for_sent_transaction(
-            deploy_account_hash,
+            deploy_account_result.transaction_hash,
             &test_input.random_paymaster_account.random_accounts()?,
         )
         .await?;
+
+        assert_result!(
+            deploy_account_result.transaction_hash == deploy_hash,
+            format!(
+                "Invalid transaction hash, expected {:?}, got {:?}",
+                deploy_hash, deploy_account_result.transaction_hash
+            )
+        );
 
         let block_number = test_input
             .random_paymaster_account
@@ -94,18 +134,22 @@ impl RunnableTrait for TestCase {
             MaybePendingBlockWithTxs::Block(block_with_txs) => block_with_txs
                 .transactions
                 .iter()
-                .position(|tx| tx.transaction_hash == deploy_account_hash)
+                .position(|tx| tx.transaction_hash == deploy_account_result.transaction_hash)
                 .ok_or_else(|| {
-                    OpenRpcTestGenError::TransactionNotFound(deploy_account_hash.to_string())
+                    OpenRpcTestGenError::TransactionNotFound(
+                        deploy_account_result.transaction_hash.to_string(),
+                    )
                 })?
                 .try_into()
                 .map_err(|_| OpenRpcTestGenError::TransactionIndexOverflow)?,
             MaybePendingBlockWithTxs::Pending(block_with_txs) => block_with_txs
                 .transactions
                 .iter()
-                .position(|tx| tx.transaction_hash == deploy_account_hash)
+                .position(|tx| tx.transaction_hash == deploy_account_result.transaction_hash)
                 .ok_or_else(|| {
-                    OpenRpcTestGenError::TransactionNotFound(deploy_account_hash.to_string())
+                    OpenRpcTestGenError::TransactionNotFound(
+                        deploy_account_result.transaction_hash.to_string(),
+                    )
                 })?
                 .try_into()
                 .map_err(|_| OpenRpcTestGenError::TransactionIndexOverflow)?,
@@ -173,6 +217,19 @@ impl RunnableTrait for TestCase {
             format!(
                 "Expected nonce to be {:?}, but got {:?}.",
                 expected_initial_nonce, txn.nonce
+            )
+        );
+
+        assert_result!(
+            is_valid_signature,
+            "Invalid signature for deploy account request, checked by t9n."
+        );
+
+        assert_result!(
+            txn.signature == signature,
+            format!(
+                "Expected signature: {:?}, got {:?}",
+                signature, txn.signature
             )
         );
 

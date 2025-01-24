@@ -47,7 +47,7 @@ impl RunnableTrait for TestCase {
             .await?;
 
         let signature = deploy_request.clone().signature;
-        let (valid_signature, _) = verify_invoke_v3_signature(
+        let (valid_signature, deploy_hash) = verify_invoke_v3_signature(
             &deploy_request,
             None,
             deployer_account
@@ -71,6 +71,14 @@ impl RunnableTrait for TestCase {
             &test_input.random_paymaster_account.random_accounts()?,
         )
         .await?;
+
+        assert_result!(
+            deploy_result.transaction_hash == deploy_hash,
+            format!(
+                "Invalid transaction hash, expected {:?}, got {:?}",
+                deploy_hash, deploy_result.transaction_hash
+            )
+        );
 
         let block_number = test_input
             .random_paymaster_account
@@ -124,7 +132,6 @@ impl RunnableTrait for TestCase {
             }
         };
 
-        println!("txn {:#?}", txn);
         assert_result!(
             txn.account_deployment_data.is_empty(),
             format!(
