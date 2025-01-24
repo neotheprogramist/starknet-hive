@@ -129,7 +129,9 @@ where
         self.prepare().await?.send().await
     }
 
-    async fn prepare(&self) -> Result<PreparedDeclarationV2<'a, A>, AccountError<A::SignError>> {
+    pub async fn prepare(
+        &self,
+    ) -> Result<PreparedDeclarationV2<'a, A>, AccountError<A::SignError>> {
         // Resolves nonce
         let nonce = match self.nonce {
             Some(value) => value,
@@ -745,7 +747,20 @@ where
             .map_err(AccountError::Provider)
     }
 
-    async fn get_declare_request(
+    pub async fn send_from_request(
+        &self,
+        tx_request: BroadcastedDeclareTxnV2<Felt>,
+    ) -> Result<ClassAndTxnHash<Felt>, AccountError<A::SignError>> {
+        self.account
+            .provider()
+            .add_declare_transaction(BroadcastedTxn::Declare(BroadcastedDeclareTxn::V2(
+                tx_request,
+            )))
+            .await
+            .map_err(AccountError::Provider)
+    }
+
+    pub async fn get_declare_request(
         &self,
         query_only: bool,
         skip_signature: bool,
