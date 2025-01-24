@@ -1,7 +1,5 @@
-use std::{path::PathBuf, str::FromStr, sync::Arc};
-
 use crate::{
-    assert_eq_result, assert_result,
+    assert_result,
     utils::v7::{
         accounts::account::{Account, ConnectedAccount},
         endpoints::{
@@ -12,7 +10,11 @@ use crate::{
     },
     RandomizableAccountsTrait, RunnableTrait,
 };
-use starknet_types_rpc::{BlockId, MaybePendingBlockWithTxs};
+use starknet_types_core::felt::Felt;
+use starknet_types_rpc::{BlockId, DeclareTxn, MaybePendingBlockWithTxs, Txn};
+use std::{path::PathBuf, str::FromStr, sync::Arc};
+
+const EXPECTED_MAX_FEE: Felt = Felt::from_hex_unchecked("0xfbee6");
 
 #[derive(Clone, Debug)]
 pub struct TestCase {}
@@ -31,14 +33,16 @@ impl RunnableTrait for TestCase {
         )
         .await?;
 
-        let declaration_hash = test_input
-            .random_paymaster_account
+        let sender = test_input.random_paymaster_account.random_accounts()?;
+        let sender_nonce = sender.get_nonce().await?;
+        let sender_address = sender.address();
+        let declaration_result = sender
             .declare_v2(Arc::new(flattened_sierra_class), compiled_class_hash)
             .send()
             .await?;
 
         wait_for_sent_transaction(
-            declaration_hash.transaction_hash,
+            declaration_result.transaction_hash,
             &test_input.random_paymaster_account.random_accounts()?,
         )
         .await?;
@@ -60,10 +64,10 @@ impl RunnableTrait for TestCase {
             MaybePendingBlockWithTxs::Block(block_with_txs) => block_with_txs
                 .transactions
                 .iter()
-                .position(|tx| tx.transaction_hash == declaration_hash.transaction_hash)
+                .position(|tx| tx.transaction_hash == declaration_result.transaction_hash)
                 .ok_or_else(|| {
                     OpenRpcTestGenError::TransactionNotFound(
-                        declaration_hash.transaction_hash.to_string(),
+                        declaration_result.transaction_hash.to_string(),
                     )
                 })?
                 .try_into()
@@ -71,10 +75,10 @@ impl RunnableTrait for TestCase {
             MaybePendingBlockWithTxs::Pending(block_with_txs) => block_with_txs
                 .transactions
                 .iter()
-                .position(|tx| tx.transaction_hash == declaration_hash.transaction_hash)
+                .position(|tx| tx.transaction_hash == declaration_result.transaction_hash)
                 .ok_or_else(|| {
                     OpenRpcTestGenError::TransactionNotFound(
-                        declaration_hash.transaction_hash.to_string(),
+                        declaration_result.transaction_hash.to_string(),
                     )
                 })?
                 .try_into()
@@ -90,16 +94,53 @@ impl RunnableTrait for TestCase {
         let result = txn.is_ok();
         assert_result!(result);
 
-        let declaration_transaction_by_hash = test_input
-            .random_paymaster_account
-            .provider()
-            .get_transaction_by_hash(declaration_hash.transaction_hash)
-            .await?;
+        let txn = match txn? {
+            Txn::Declare(DeclareTxn::V2(txn)) => txn,
+            _ => {
+                return Err(OpenRpcTestGenError::UnexpectedTxnType(
+                    "Unexpected txn type ".to_string(),
+                ));
+            }
+        };
 
-        assert_eq_result!(
-            txn?,
-            declaration_transaction_by_hash,
-            "Transaction by block id and index does not match the transaction by hash"
+        assert_result!(
+            txn.class_hash == declaration_result.class_hash,
+            format!(
+                "Expected txn class hash to be {:?} but got {:?}",
+                declaration_result.class_hash, txn.class_hash
+            )
+        );
+
+        assert_result!(
+            txn.compiled_class_hash == compiled_class_hash,
+            format!(
+                "Expected txn compiled class hash to be {:?} but got {:?}",
+                compiled_class_hash, txn.compiled_class_hash
+            )
+        );
+
+        assert_result!(
+            txn.max_fee == EXPECTED_MAX_FEE,
+            format!(
+                "Expected txn max fee to be {:?} but got {:?}",
+                EXPECTED_MAX_FEE, txn.max_fee
+            )
+        );
+
+        assert_result!(
+            txn.nonce == sender_nonce,
+            format!(
+                "Expected txn nonce to be {:?} but got {:?}",
+                sender_nonce, txn.nonce
+            )
+        );
+
+        assert_result!(
+            txn.sender_address == sender_address,
+            format!(
+                "Expected txn sender address to be {:?} but got {:?}",
+                sender_address, txn.sender_address
+            )
         );
 
         Ok(Self {})
