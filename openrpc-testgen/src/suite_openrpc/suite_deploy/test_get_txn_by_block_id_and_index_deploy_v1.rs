@@ -10,8 +10,10 @@ use crate::{
 };
 use rand::{rngs::StdRng, RngCore, SeedableRng};
 use starknet_types_core::felt::Felt;
-use starknet_types_rpc::{BlockId, InvokeTxn, MaybePendingBlockWithTxs, Txn};
-
+use starknet_types_rpc::{
+    BlockId, BroadcastedInvokeTxn, BroadcastedTxn, InvokeTxn, MaybePendingBlockWithTxs, Txn,
+};
+use t9n::txn_validation::invoke::verify_invoke_v1_signature;
 const UDC_ADDRESS: Felt =
     Felt::from_hex_unchecked("0x041a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf");
 const MAX_FEE: Felt = Felt::from_hex_unchecked("0x2977");
@@ -27,7 +29,7 @@ impl RunnableTrait for TestCase {
         let sender = test_input.random_paymaster_account.random_accounts()?;
         let sender_nonce = sender.get_nonce().await?;
         let sender_address = sender.address();
-        let factory = ContractFactory::new(class_hash, sender);
+        let factory = ContractFactory::new(class_hash, sender.clone());
         let mut salt_buffer = [0u8; 32];
         let mut rng = StdRng::from_entropy();
         rng.fill_bytes(&mut salt_buffer[1..]);
@@ -35,17 +37,49 @@ impl RunnableTrait for TestCase {
         let unique = true;
         let constructor_calldata = vec![];
 
-        let invoke_result = factory
+        let deploy_request = factory
             .deploy_v1(constructor_calldata.clone(), salt, unique)
             .max_fee(MAX_FEE)
-            .send()
+            .prepare_execute()
+            .await?
+            .get_invoke_request(false, false)
+            .await?;
+
+        let signature = deploy_request.clone().signature;
+
+        let (valid_signature, deploy_hash) = verify_invoke_v1_signature(
+            &deploy_request,
+            None,
+            sender
+                .clone()
+                .provider()
+                .chain_id()
+                .await?
+                .to_hex_string()
+                .as_str(),
+        )?;
+
+        let deploy_result = test_input
+            .random_paymaster_account
+            .provider()
+            .add_invoke_transaction(BroadcastedTxn::Invoke(BroadcastedInvokeTxn::V1(
+                deploy_request,
+            )))
             .await?;
 
         wait_for_sent_transaction(
-            invoke_result.transaction_hash,
+            deploy_result.transaction_hash,
             &test_input.random_paymaster_account.random_accounts()?,
         )
         .await?;
+
+        assert_result!(
+            deploy_result.transaction_hash == deploy_hash,
+            format!(
+                "Exptected transaction hash to be {:?}, got {:?}",
+                deploy_hash, deploy_result.transaction_hash
+            )
+        );
 
         let block_number = test_input
             .random_paymaster_account
@@ -64,10 +98,10 @@ impl RunnableTrait for TestCase {
             MaybePendingBlockWithTxs::Block(block_with_txs) => block_with_txs
                 .transactions
                 .iter()
-                .position(|tx| tx.transaction_hash == invoke_result.transaction_hash)
+                .position(|tx| tx.transaction_hash == deploy_result.transaction_hash)
                 .ok_or_else(|| {
                     OpenRpcTestGenError::TransactionNotFound(
-                        invoke_result.transaction_hash.to_string(),
+                        deploy_result.transaction_hash.to_string(),
                     )
                 })?
                 .try_into()
@@ -75,10 +109,10 @@ impl RunnableTrait for TestCase {
             MaybePendingBlockWithTxs::Pending(block_with_txs) => block_with_txs
                 .transactions
                 .iter()
-                .position(|tx| tx.transaction_hash == invoke_result.transaction_hash)
+                .position(|tx| tx.transaction_hash == deploy_result.transaction_hash)
                 .ok_or_else(|| {
                     OpenRpcTestGenError::TransactionNotFound(
-                        invoke_result.transaction_hash.to_string(),
+                        deploy_result.transaction_hash.to_string(),
                     )
                 })?
                 .try_into()
@@ -229,6 +263,19 @@ impl RunnableTrait for TestCase {
             format!(
                 "Expected sender address to be {:#?}, got {:#?} ",
                 sender_address, txn.sender_address
+            )
+        );
+
+        assert_result!(
+            valid_signature,
+            format!("Invalid signature, checked by t9n.",)
+        );
+
+        assert_result!(
+            txn.signature == signature,
+            format!(
+                "Expected signature: {:?}, got {:?}",
+                signature, txn.signature
             )
         );
 
