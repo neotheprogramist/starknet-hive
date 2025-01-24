@@ -2,7 +2,7 @@ use crate::utils::v7::accounts::account::Account;
 use crate::utils::v7::accounts::call::Call;
 use crate::utils::v7::accounts::creation::create::{create_account, AccountType};
 use crate::utils::v7::accounts::deployment::deploy::{
-    deploy_account_v3_from_request, get_deploy_v3_request,
+    deploy_account_v3_from_request, get_deploy_account_request, DeployAccountVersion,
 };
 use crate::utils::v7::accounts::deployment::structs::{ValidatedWaitParams, WaitForTx};
 use crate::utils::v7::endpoints::utils::{get_selector_from_name, wait_for_sent_transaction};
@@ -61,13 +61,24 @@ impl RunnableTrait for TestCase {
             wait_params: ValidatedWaitParams::default(),
         };
 
-        let deploy_account_request = get_deploy_v3_request(
+        let txn_req = get_deploy_account_request(
             test_input.random_paymaster_account.provider(),
             test_input.random_paymaster_account.chain_id(),
             wait_config,
             account_data,
+            DeployAccountVersion::V3,
         )
         .await?;
+
+        let deploy_account_request = match txn_req {
+            DeployAccountTxn::V3(txn_req) => txn_req,
+            _ => {
+                return Err(OpenRpcTestGenError::UnexpectedTxnType(format!(
+                    "Unexpected transaction request type: {:?}",
+                    txn_req
+                )));
+            }
+        };
 
         let signature = deploy_account_request.clone().signature;
 

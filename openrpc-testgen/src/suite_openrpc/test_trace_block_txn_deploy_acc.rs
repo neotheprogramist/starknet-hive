@@ -6,7 +6,7 @@ use crate::{
             call::Call,
             creation::create::{create_account, AccountType},
             deployment::{
-                deploy::{deploy_account_v3_from_request, get_deploy_v3_request},
+                deploy::{deploy_account_v3_from_request, get_deploy_account_request, DeployAccountVersion},
                 structs::{ValidatedWaitParams, WaitForTx},
             },
         },
@@ -20,8 +20,7 @@ use crate::{
 };
 use starknet_types_core::felt::Felt;
 use starknet_types_rpc::{
-    BlockId, BlockTag, DeployAccountTransactionTrace, EntryPointType, TraceBlockTransactionsResult,
-    TransactionTrace,
+    BlockId, BlockTag, DeployAccountTransactionTrace, DeployAccountTxn, EntryPointType, TraceBlockTransactionsResult, TransactionTrace
 };
 use t9n::txn_validation::deploy_account::verify_deploy_account_v3_signature;
 
@@ -72,13 +71,24 @@ impl RunnableTrait for TestCase {
             wait_params: ValidatedWaitParams::default(),
         };
 
-        let deploy_account_request = get_deploy_v3_request(
+        let txn_req = get_deploy_account_request(
             test_input.random_paymaster_account.provider(),
             test_input.random_paymaster_account.chain_id(),
             wait_config,
             account_data,
+            DeployAccountVersion::V3,
         )
         .await?;
+
+        let deploy_account_request = match txn_req {
+            DeployAccountTxn::V3(txn_req) => txn_req,
+            _ => {
+                return Err(OpenRpcTestGenError::UnexpectedTxnType(format!(
+                    "Unexpected transaction request type: {:?}",
+                    txn_req
+                )));
+            }
+        };
 
         let (_, deploy_account_tx_hash) = verify_deploy_account_v3_signature(
             &deploy_account_request,

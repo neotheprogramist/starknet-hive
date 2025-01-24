@@ -8,7 +8,7 @@ use crate::{
             deployment::{
                 deploy::{
                     deploy_account_v3_from_request, estimate_fee_deploy_account,
-                    get_deploy_v3_request, DeployAccountVersion,
+                    get_deploy_account_request, DeployAccountVersion,
                 },
                 structs::{ValidatedWaitParams, WaitForTx},
             },
@@ -88,13 +88,24 @@ impl RunnableTrait for TestCase {
         )
         .await?;
 
-        let deploy_account_request = get_deploy_v3_request(
+        let txn_req = get_deploy_account_request(
             test_input.random_paymaster_account.provider(),
             test_input.random_paymaster_account.chain_id(),
             wait_config,
             account_data,
+            DeployAccountVersion::V3,
         )
         .await?;
+
+        let deploy_account_request = match txn_req {
+            DeployAccountTxn::V3(txn_req) => txn_req,
+            _ => {
+                return Err(OpenRpcTestGenError::UnexpectedTxnType(format!(
+                    "Unexpected transaction request type: {:?}",
+                    txn_req
+                )));
+            }
+        };
 
         let signature = deploy_account_request.clone().signature;
 
