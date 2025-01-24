@@ -1,4 +1,5 @@
 use crate::{
+    assert_result,
     utils::v7::{
         accounts::{
             account::{Account, ConnectedAccount},
@@ -17,12 +18,10 @@ use crate::{
     },
     RandomizableAccountsTrait, RunnableTrait,
 };
-use colored::Colorize;
 use starknet_types_core::felt::Felt;
 use starknet_types_rpc::{BlockId, DeployAccountTxn, MaybePendingBlockWithTxs, Txn};
-use tracing::{error, info};
 
-// TODO discuss this test case
+const EXPECTED_MAX_FEE: Felt = Felt::from_hex_unchecked("0x336f");
 #[derive(Clone, Debug)]
 pub struct TestCase {}
 
@@ -116,29 +115,66 @@ impl RunnableTrait for TestCase {
             .random_paymaster_account
             .provider()
             .get_transaction_by_block_id_and_index(BlockId::Number(block_number), txn_index)
-            .await?;
+            .await;
 
-        match txn {
-            Txn::DeployAccount(DeployAccountTxn::V1(_)) => {
-                info!(
-                    "{} {}",
-                    "\n✓ Rpc get_transaction_by_block_id_and_index_deploy_account_v1 COMPATIBLE"
-                        .green(),
-                    "✓".green()
-                );
-            }
+        let result = txn.is_ok();
+        assert_result!(result);
+
+        let txn = match txn? {
+            Txn::DeployAccount(DeployAccountTxn::V1(txn)) => txn,
             _ => {
-                let error_message = format!("Unexpected transaction response type: {:?}", txn);
-                error!(
-                    "{} {} {}",
-                    "✗ Rpc get_transaction_by_block_id_and_index_deploy_account_v1 INCOMPATIBLE:"
-                        .red(),
-                    error_message,
-                    "✗".red()
-                );
-                return Err(OpenRpcTestGenError::UnexpectedTxnType(error_message));
+                return Err(OpenRpcTestGenError::UnexpectedTxnType(
+                    "Unexpected txn type ".to_string(),
+                ));
             }
-        }
+        };
+
+        let expected_class_hash = test_input.account_class_hash;
+        assert_result!(
+            txn.class_hash == expected_class_hash,
+            format!(
+                "Expected class hash {:?} but got {:?}",
+                expected_class_hash, txn.class_hash
+            )
+        );
+
+        let constructor_calldata_len = txn.constructor_calldata.len();
+        assert_result!(
+            constructor_calldata_len == 1,
+            format!(
+                "Expected constructor calldata length to be 1, but got {}.",
+                constructor_calldata_len
+            )
+        );
+
+        let constructor_calldata = *txn.constructor_calldata.first().ok_or_else(|| {
+            OpenRpcTestGenError::Other("Missing constructor calldata".to_string())
+        })?;
+        let account_public_key = account_data.signing_key.verifying_key().scalar();
+        assert_result!(
+            constructor_calldata == account_public_key,
+            format!(
+                "Expected constructor calldata to be {:?}, but got {:?}.",
+                account_public_key, constructor_calldata
+            )
+        );
+
+        assert_result!(
+            txn.max_fee == EXPECTED_MAX_FEE,
+            format!(
+                "Expected max fee to be {:?}, but got {:?}.",
+                EXPECTED_MAX_FEE, txn.max_fee
+            )
+        );
+
+        let expected_initial_nonce = Felt::ZERO;
+        assert_result!(
+            txn.nonce == expected_initial_nonce,
+            format!(
+                "Expected nonce to be {:?}, but got {:?}.",
+                expected_initial_nonce, txn.nonce
+            )
+        );
 
         Ok(Self {})
     }
