@@ -200,7 +200,7 @@ where
         self.prepare().await?.send().await
     }
 
-    async fn prepare(&self) -> Result<PreparedExecutionV1<'a, A>, AccountError<A::SignError>> {
+    pub async fn prepare(&self) -> Result<PreparedExecutionV1<'a, A>, AccountError<A::SignError>> {
         // Resolves nonce
         let nonce = match self.nonce {
             Some(value) => value,
@@ -782,7 +782,7 @@ where
     // The `simulate` function is temporarily removed until it's supported in [Provider]
     // TODO: add `simulate` back once transaction simulation in supported
 
-    async fn get_invoke_request(
+    pub async fn get_invoke_request(
         &self,
         query_only: bool,
         skip_signature: bool,
