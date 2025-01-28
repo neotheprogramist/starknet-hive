@@ -811,6 +811,10 @@ where
             calldata: self.account.encode_calls(&self.inner.calls),
         })
     }
+
+    pub async fn get_raw_execution(&self) -> &RawExecutionV1 {
+        &self.inner
+    }
 }
 
 impl<'a, A> PreparedExecutionV3<'a, A>
@@ -937,5 +941,9 @@ where
             nonce_data_availability_mode: DaMode::L1,
             fee_data_availability_mode: DaMode::L1,
         })
+    }
+
+    pub async fn get_raw_execution(&self) -> &RawExecutionV3 {
+        &self.inner
     }
 }
