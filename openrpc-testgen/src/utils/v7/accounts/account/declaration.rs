@@ -783,6 +783,10 @@ where
             sender_address: self.account.address(),
         })
     }
+
+    pub async fn get_raw_execution(&self) -> &RawDeclarationV2 {
+        &self.inner
+    }
 }
 
 impl<'a, A> PreparedDeclarationV3<'a, A>
@@ -868,5 +872,9 @@ where
             nonce_data_availability_mode: DaMode::L1,
             fee_data_availability_mode: DaMode::L1,
         })
+    }
+
+    pub async fn get_raw_execution(&self) -> &RawDeclarationV3 {
+        &self.inner
     }
 }
