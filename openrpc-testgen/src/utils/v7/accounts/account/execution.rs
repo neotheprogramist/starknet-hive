@@ -866,7 +866,6 @@ where
         skip_signature: bool,
     ) -> Result<InvokeTxnV3<Felt>, A::SignError> {
         Ok(InvokeTxnV3 {
-            // transaction_hash: self.inner.transaction_hash(self.account.chain_id()),
             sender_address: self.account.address(),
             calldata: self.account.encode_calls(&self.inner.calls),
             signature: if skip_signature {
@@ -909,7 +908,6 @@ where
         signature: Vec<Felt>,
     ) -> Result<InvokeTxnV3<Felt>, A::SignError> {
         Ok(InvokeTxnV3 {
-            // transaction_hash: self.inner.transaction_hash(self.account.chain_id()),
             sender_address: self.account.address(),
             calldata: self.account.encode_calls(&self.inner.calls),
             signature,
