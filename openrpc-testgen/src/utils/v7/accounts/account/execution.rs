@@ -383,6 +383,16 @@ where
         self.prepare().await?.send().await
     }
 
+    pub async fn send_with_custom_signature(
+        &self,
+        signature: Vec<Felt>,
+    ) -> Result<AddInvokeTransactionResult<Felt>, AccountError<A::SignError>> {
+        self.prepare()
+            .await?
+            .send_with_custom_signature(signature)
+            .await
+    }
+
     pub async fn prepare(&self) -> Result<PreparedExecutionV3<'a, A>, AccountError<A::SignError>> {
         // Resolves nonce
         let nonce = match self.nonce {
@@ -821,6 +831,21 @@ where
             .map_err(AccountError::Provider)
     }
 
+    pub async fn send_with_custom_signature(
+        &self,
+        signature: Vec<Felt>,
+    ) -> Result<AddInvokeTransactionResult<Felt>, AccountError<A::SignError>> {
+        let tx_request = self
+            .get_invoke_request_with_custom_signature(signature)
+            .await
+            .map_err(AccountError::Signing)?;
+        self.account
+            .provider()
+            .add_invoke_transaction(BroadcastedTxn::Invoke(BroadcastedInvokeTxn::V3(tx_request)))
+            .await
+            .map_err(AccountError::Provider)
+    }
+
     pub async fn send_from_request(
         &self,
         tx_request: InvokeTxnV3<Felt>,
@@ -841,7 +866,6 @@ where
         skip_signature: bool,
     ) -> Result<InvokeTxnV3<Felt>, A::SignError> {
         Ok(InvokeTxnV3 {
-            // transaction_hash: self.inner.transaction_hash(self.account.chain_id()),
             sender_address: self.account.address(),
             calldata: self.account.encode_calls(&self.inner.calls),
             signature: if skip_signature {
@@ -851,6 +875,42 @@ where
                     .sign_execution_v3(&self.inner, query_only)
                     .await?
             },
+            nonce: self.inner.nonce,
+            resource_bounds: ResourceBoundsMapping {
+                l1_gas: ResourceBounds {
+                    max_amount: Felt::from_dec_str(&self.inner.gas.to_string())
+                        .unwrap()
+                        .to_hex_string(),
+                    max_price_per_unit: Felt::from_dec_str(&self.inner.gas_price.to_string())
+                        .unwrap()
+                        .to_hex_string(),
+                },
+                // L2 resources are hard-coded to 0
+                l2_gas: ResourceBounds {
+                    max_amount: "0x0".to_string(),
+                    max_price_per_unit: "0x0".to_string(),
+                },
+            },
+            // Fee market has not been been activated yet so it's hard-coded to be 0
+            tip: Felt::ZERO,
+            // Hard-coded empty `paymaster_data`
+            paymaster_data: vec![],
+            // Hard-coded empty `account_deployment_data`
+            account_deployment_data: vec![],
+            // Hard-coded L1 DA mode for nonce and fee
+            nonce_data_availability_mode: DaMode::L1,
+            fee_data_availability_mode: DaMode::L1,
+        })
+    }
+
+    pub async fn get_invoke_request_with_custom_signature(
+        &self,
+        signature: Vec<Felt>,
+    ) -> Result<InvokeTxnV3<Felt>, A::SignError> {
+        Ok(InvokeTxnV3 {
+            sender_address: self.account.address(),
+            calldata: self.account.encode_calls(&self.inner.calls),
+            signature,
             nonce: self.inner.nonce,
             resource_bounds: ResourceBoundsMapping {
                 l1_gas: ResourceBounds {
