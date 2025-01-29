@@ -1,5 +1,10 @@
 pub mod transports;
+use super::provider::{Provider, ProviderError, ProviderImplError};
+use crate::utils::v8::types::{
+    ContractStorageKeysItem, GetStorageProofParams, GetStorageProofResult,
+};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use starknet_types_core::felt::Felt as FeltPrimitive;
 use starknet_types_rpc::{
     v0_7_1::{
         AddDeclareTransactionParams, AddDeployAccountTransactionParams, AddInvokeTransactionParams,
@@ -20,9 +25,6 @@ use starknet_types_rpc::{
     BlockWithReceipts, GetBlockWithReceiptsParams,
 };
 use std::{any::Any, error::Error, fmt::Display};
-
-use super::provider::{Provider, ProviderError, ProviderImplError};
-use starknet_types_core::felt::Felt as FeltPrimitive;
 pub use transports::{HttpTransport, JsonRpcTransport};
 
 #[derive(Debug, Clone)]
@@ -44,6 +46,8 @@ pub enum JsonRpcMethod {
     GetStateUpdate,
     #[serde(rename = "starknet_getStorageAt")]
     GetStorageAt,
+    #[serde(rename = "starknet_getStorageProof")]
+    GetStorageProof,
     #[serde(rename = "starknet_getTransactionStatus")]
     GetTransactionStatus,
     #[serde(rename = "starknet_getTransactionByHash")]
@@ -106,6 +110,7 @@ pub enum JsonRpcRequestData {
     GetBlockWithReceipts(GetBlockWithReceiptsParams<FeltPrimitive>),
     GetStateUpdate(GetStateUpdateParams<FeltPrimitive>),
     GetStorageAt(GetStorageAtParams<FeltPrimitive>),
+    GetStorageProof(GetStorageProofParams<FeltPrimitive>),
     GetTransactionStatus(GetTransactionStatusParams<FeltPrimitive>),
     GetTransactionByHash(GetTransactionByHashParams<FeltPrimitive>),
     GetTransactionByBlockIdAndIndex(GetTransactionByBlockIdAndIndexParams<FeltPrimitive>),
@@ -280,6 +285,25 @@ where
             )
             .await?
             .0)
+    }
+
+    async fn get_storage_proof(
+        &self,
+        block_id: BlockId<FeltPrimitive>,
+        class_hashes: Option<Vec<FeltPrimitive>>,
+        contract_addresses: Option<Vec<FeltPrimitive>>,
+        contracts_storage_keys: Option<Vec<ContractStorageKeysItem>>,
+    ) -> Result<GetStorageProofResult, ProviderError> {
+        self.send_request(
+            JsonRpcMethod::GetStorageProof,
+            GetStorageProofParams {
+                block_id,
+                class_hashes,
+                contract_addresses,
+                contracts_storage_keys,
+            },
+        )
+        .await
     }
 
     /// Gets the transaction status (possibly reflecting that the tx is still in
@@ -662,6 +686,10 @@ impl<'de> Deserialize<'de> for JsonRpcRequest {
             ),
             JsonRpcMethod::GetStorageAt => JsonRpcRequestData::GetStorageAt(
                 serde_json::from_value::<GetStorageAtParams<FeltPrimitive>>(raw_request.params)
+                    .map_err(error_mapper)?,
+            ),
+            JsonRpcMethod::GetStorageProof => JsonRpcRequestData::GetStorageProof(
+                serde_json::from_value::<GetStorageProofParams<FeltPrimitive>>(raw_request.params)
                     .map_err(error_mapper)?,
             ),
             JsonRpcMethod::GetTransactionStatus => JsonRpcRequestData::GetTransactionStatus(

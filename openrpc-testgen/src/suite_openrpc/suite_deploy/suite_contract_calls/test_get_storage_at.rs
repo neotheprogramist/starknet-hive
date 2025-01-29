@@ -132,6 +132,13 @@ impl RunnableTrait for TestCase {
             )
         );
 
+        println!(
+            "deployed_contract_address {:#?}",
+            test_input.deployed_contract_address,
+        );
+
+        println!("contract_balance_slot {:#?}", contract_balance_slot);
+
         Ok(Self {})
     }
 }
