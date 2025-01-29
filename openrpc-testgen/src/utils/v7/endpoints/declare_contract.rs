@@ -143,8 +143,21 @@ pub async fn get_compiled_contract(
     let contract_artifact: SierraClass = serde_json::from_str(&sierra)?;
     let compiled_class: CompiledClass = serde_json::from_str(&casm)?;
 
-    let casm_class_hash = compiled_class.class_hash().unwrap();
-    let flattened_class = contract_artifact.clone().flatten().unwrap();
+    let casm_class_hash = compiled_class.class_hash()?;
+    let flattened_class = contract_artifact.clone().flatten()?;
+
+    Ok((flattened_class, casm_class_hash))
+}
+
+pub async fn get_compiled_contract_from_string(
+    sierra: String,
+    casm: String,
+) -> Result<(ContractClass<Felt>, TxnHash<Felt>), RunnerError> {
+    let contract_artifact: SierraClass = serde_json::from_str(&sierra)?;
+    let compiled_class: CompiledClass = serde_json::from_str(&casm)?;
+
+    let casm_class_hash = compiled_class.class_hash()?;
+    let flattened_class = contract_artifact.clone().flatten()?;
 
     Ok((flattened_class, casm_class_hash))
 }
