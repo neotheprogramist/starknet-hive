@@ -1,6 +1,7 @@
 use std::path::PathBuf;
 use std::str::FromStr;
 
+use crate::utils::starknet_hive::StarknetHive;
 use crate::utils::v7::accounts::account::{Account, ConnectedAccount};
 use crate::utils::v7::endpoints::declare_contract::get_compiled_contract;
 use crate::utils::v7::endpoints::utils::wait_for_sent_transaction;
@@ -25,7 +26,8 @@ impl RunnableTrait for TestCase {
     type Input = super::TestSuiteOpenRpc;
 
     async fn run(test_input: &Self::Input) -> Result<Self, OpenRpcTestGenError> {
-        let account = test_input.random_paymaster_account.random_accounts()?;
+        let hive = test_input.hive.clone();
+        let account = hive.clone().account;
         let acc_class_hash = test_input.account_class_hash;
 
         let nonce = account
@@ -39,19 +41,18 @@ impl RunnableTrait for TestCase {
             )
             .await?;
 
-        let declare_result = test_input
-            .random_paymaster_account
+        let declare_result = hive
             .declare_v3(flattened_sierra_class.clone(), compiled_class_hash)
             .send()
             .await?;
 
         wait_for_sent_transaction(
             declare_result.transaction_hash,
-            &test_input.random_paymaster_account.random_accounts()?,
+            &account,
         )
         .await?;
 
-        let trace_result = account
+        let trace_result = hive
             .provider()
             .trace_transaction(declare_result.transaction_hash)
             .await;
@@ -246,6 +247,8 @@ impl RunnableTrait for TestCase {
                 entry_point_type_external, validate_invocation.entry_point_type
             )
         );
+
+        println!("trace declare v3 success");
 
         Ok(Self {})
     }

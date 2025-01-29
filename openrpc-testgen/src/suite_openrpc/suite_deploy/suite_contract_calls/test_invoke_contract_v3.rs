@@ -49,15 +49,15 @@ impl RunnableTrait for TestCase {
             .send()
             .await;
 
+        let result = invoke_result.is_ok();
+
+        assert_result!(result);
+
         wait_for_sent_transaction(
             invoke_result.as_ref().unwrap().transaction_hash,
             &test_input.random_paymaster_account.random_accounts()?,
         )
         .await?;
-
-        let result = invoke_result.is_ok();
-
-        assert_result!(result);
 
         let updated_balance = *test_input
             .random_paymaster_account

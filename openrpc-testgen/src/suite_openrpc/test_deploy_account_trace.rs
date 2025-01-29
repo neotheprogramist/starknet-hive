@@ -1,20 +1,25 @@
 use crate::{
     assert_matches_result, assert_result,
-    utils::v7::{
-        accounts::{
-            account::{Account, ConnectedAccount},
-            call::Call,
-            creation::create::{create_account, AccountType},
-            deployment::{
-                deploy::{deploy_account, DeployAccountVersion},
-                structs::{ValidatedWaitParams, WaitForTx},
+    utils::{
+        starknet_hive::StarknetHive,
+        v7::{
+            accounts::{
+                account::{Account, ConnectedAccount},
+                call::Call,
+                creation::create::{create_account, AccountType},
+                deployment::{
+                    deploy::{deploy_account, DeployAccountVersion},
+                    structs::{ValidatedWaitParams, WaitForTx},
+                },
             },
+            endpoints::{
+                errors::OpenRpcTestGenError,
+                utils::{
+                    get_selector_from_name, get_storage_var_address, wait_for_sent_transaction,
+                },
+            },
+            providers::provider::Provider,
         },
-        endpoints::{
-            errors::OpenRpcTestGenError,
-            utils::{get_selector_from_name, get_storage_var_address, wait_for_sent_transaction},
-        },
-        providers::provider::Provider,
     },
     RandomizableAccountsTrait, RunnableTrait,
 };
@@ -33,10 +38,11 @@ impl RunnableTrait for TestCase {
     type Input = super::TestSuiteOpenRpc;
 
     async fn run(test_input: &Self::Input) -> Result<Self, OpenRpcTestGenError> {
-        let account_paymaster = test_input.random_paymaster_account.random_accounts()?;
+        let hive = test_input.hive.clone();
+        let account_paymaster = hive.clone().account;
 
         let account_data = create_account(
-            test_input.random_paymaster_account.provider(),
+            hive.provider(),
             AccountType::Oz,
             Option::None,
             Some(test_input.account_class_hash),
@@ -45,8 +51,7 @@ impl RunnableTrait for TestCase {
 
         let transfer_amount = Felt::from_hex("0xfffffffffffffff")?;
 
-        let transfer_execution = test_input
-            .random_paymaster_account
+        let transfer_execution = hive
             .execute_v3(vec![Call {
                 to: Felt::from_hex(
                     "0x4718F5A0FC34CC1AF16A1CDEE98FFB20C31F5CD61D6AB07201858F4287C938D",
@@ -57,11 +62,7 @@ impl RunnableTrait for TestCase {
             .send()
             .await?;
 
-        wait_for_sent_transaction(
-            transfer_execution.transaction_hash,
-            &test_input.random_paymaster_account.random_accounts()?,
-        )
-        .await?;
+        wait_for_sent_transaction(transfer_execution.transaction_hash, &hive.account).await?;
 
         let wait_config = WaitForTx {
             wait: true,
@@ -69,19 +70,15 @@ impl RunnableTrait for TestCase {
         };
 
         let deploy_account_hash = deploy_account(
-            test_input.random_paymaster_account.provider(),
-            test_input.random_paymaster_account.chain_id(),
+            hive.provider(),
+            hive.chain_id(),
             wait_config,
             account_data,
             DeployAccountVersion::V3,
         )
         .await?;
 
-        wait_for_sent_transaction(
-            deploy_account_hash,
-            &test_input.random_paymaster_account.random_accounts()?,
-        )
-        .await?;
+        wait_for_sent_transaction(deploy_account_hash, &hive.account).await?;
 
         let trace_result = account_paymaster
             .provider()
@@ -422,6 +419,8 @@ impl RunnableTrait for TestCase {
                 entry_point_type_external, validate_invocation.entry_point_type
             )
         );
+
+        println!("trace deploy account v3 success");
 
         Ok(Self {})
     }

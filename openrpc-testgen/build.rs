@@ -163,20 +163,103 @@ fn process_module_directory(
     )
     .unwrap();
 
-    for test_name in test_cases {
-        writeln!(
-            file,
-            "        if let Err(e) = {}::{}::TestCase::run(&data).await {{
-                let error_msg = format!(\"✗ Test case src/{} failed with runtime error: {{:?}}\", e);
-                tracing::error!(\"{{}}\", error_msg.red());
-                failed_tests.insert(\"{}\".to_string(), error_msg);
-            }} else {{
-                tracing::info!(\"{{}}\", \"✓ Test case src/{} completed successfully.\".green());
-            }}",
-            module_prefix, test_name, test_name, test_name, test_name
-        )
-        .unwrap();
-    }
+    // writeln!(
+    //     file,
+    //     "        let test_data: Vec<_> = vec![{}];",
+    //     test_cases
+    //         .iter()
+    //         .map(|test_name| format!(
+    //             "match {}::{}::setup(input).await {{
+    //                 Ok(data) => data,
+    //                 Err(e) => {{
+    //                     tracing::error!(\"Setup failed for {} with error: {{:?}}\", e);
+    //                     failed_tests.insert(\"{}\".to_string(), format!(\"Setup failed: {{:?}}\", e));
+    //                     return Err(crate::utils::v7::endpoints::errors::OpenRpcTestGenError::TestSuiteFailure {{ failed_tests }});
+    //                 }}
+    //             }}", module_prefix, struct_name, test_name, test_name
+    //         ))
+    //         .collect::<Vec<_>>()
+    //         .join(", ")
+    // ).unwrap();
+
+    writeln!(
+        file,
+        "        let test_data: Vec<_> = vec![{}];",
+        test_cases
+            .iter()
+            .map(|test_name| format!(
+                "match {}::{}::setup(input).await {{
+                    Ok(data) => data,
+                    Err(e) => {{
+                        tracing::error!(\"Setup failed for {} with error: {{:?}}\", e);
+                        failed_tests.insert(\"{}\".to_string(), format!(\"Setup failed: {{:?}}\", e));
+                        return Err(crate::utils::v7::endpoints::errors::OpenRpcTestGenError::TestSuiteFailure {{ failed_tests }});
+                    }}
+                }}", module_prefix, struct_name, test_name, test_name
+            ))
+            .collect::<Vec<_>>()
+            .join(", ")
+    ).unwrap();
+
+    writeln!(
+        file,
+        "        let test_results = tokio::join!({});",
+        test_cases
+            .iter()
+            .enumerate()
+            .map(|(i, test_name)| format!(
+                "{}::{}::TestCase::run(&test_data[{}])",
+                module_prefix, test_name, i
+            ))
+            .collect::<Vec<_>>()
+            .join(", ")
+    )
+    .unwrap();
+
+    // writeln!(
+    //     file,
+    //     "        let test_results = tokio::join!({});",
+    //     test_cases
+    //         .iter()
+    //         .map(|test_name| format!("{}::{}::TestCase::run(&data)", module_prefix, test_name))
+    //         .collect::<Vec<_>>()
+    //         .join(", ")
+    // )
+    // .unwrap();
+
+    writeln!(
+        file,
+        "        let test_names = [{}];",
+        test_cases
+            .iter()
+            .map(|test_name| format!("\"{}\"", test_name))
+            .collect::<Vec<_>>()
+            .join(", ")
+    )
+    .unwrap();
+
+    // writeln!(
+    //     file,
+    //     "        let test_results_vec = vec![{}];",
+    //     (0..test_cases.len())
+    //         .map(|i| format!("test_results.{}", i))
+    //         .collect::<Vec<_>>()
+    //         .join(", ")
+    // )
+    // .unwrap();
+
+    // writeln!(
+    //     file,
+    //     "        for (i, result) in test_results_vec.iter().enumerate() {{
+    //                 if let Err(e) = result {{
+    //                     let error_msg = format!(\"✗ Test case src/{{}} failed with runtime error: {{:?}}\", test_names[i], e);
+    //                     tracing::error!(\"{{}}\", error_msg.red());
+    //                     failed_tests.insert(test_names[i].to_string(), error_msg);
+    //                 }} else {{
+    //                     tracing::info!(\"{{}}\", format!(\"✓ Test case src/{{}} completed successfully.\", test_names[i]).green());
+    //                 }}
+    //             }}",
+    // ).unwrap();
 
     for nested_suite in nested_suites.clone() {
         let nested_module_path = module_path.join(&nested_suite).join("mod.rs");

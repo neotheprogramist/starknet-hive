@@ -1,19 +1,23 @@
 use serde_json::Value;
+use starknet_types_core::felt::Felt;
 use starknet_types_rpc::{BlockId, BlockTag};
 
 use crate::{
     assert_result,
-    utils::v7::{
-        accounts::account::{Account, AccountError, ConnectedAccount},
-        endpoints::{
-            declare_contract::{
-                extract_class_hash_from_error, get_compiled_contract, parse_class_hash_from_error,
-                RunnerError,
+    utils::{
+        starknet_hive::StarknetHive,
+        v7::{
+            accounts::account::{Account, AccountError, ConnectedAccount},
+            endpoints::{
+                declare_contract::{
+                    extract_class_hash_from_error, get_compiled_contract,
+                    parse_class_hash_from_error, RunnerError,
+                },
+                errors::OpenRpcTestGenError,
+                utils::wait_for_sent_transaction,
             },
-            errors::OpenRpcTestGenError,
-            utils::wait_for_sent_transaction,
+            providers::provider::{Provider, ProviderError},
         },
-        providers::provider::{Provider, ProviderError},
     },
     RandomizableAccountsTrait, RunnableTrait,
 };
@@ -27,24 +31,21 @@ impl RunnableTrait for TestCase {
     type Input = super::TestSuiteOpenRpc;
 
     async fn run(test_input: &Self::Input) -> Result<Self, OpenRpcTestGenError> {
+        let hive = test_input.hive.clone();
+
         let (flattened_sierra_class, compiled_class_hash) = get_compiled_contract(
             PathBuf::from_str("target/dev/contracts_contracts_sample_contract_2_HelloStarknet.contract_class.json")?,
             PathBuf::from_str("target/dev/contracts_contracts_sample_contract_2_HelloStarknet.compiled_contract_class.json")?,
         )
         .await?;
 
-        let declaration_hash = match test_input
-            .random_paymaster_account
+        let declaration_hash = match hive
             .declare_v3(flattened_sierra_class.clone(), compiled_class_hash)
             .send()
             .await
         {
             Ok(result) => {
-                wait_for_sent_transaction(
-                    result.transaction_hash,
-                    &test_input.random_paymaster_account.random_accounts()?,
-                )
-                .await?;
+                wait_for_sent_transaction(result.transaction_hash, &hive.account).await?;
 
                 Ok(result.class_hash)
             }
@@ -92,8 +93,7 @@ impl RunnableTrait for TestCase {
 
         assert_result!(result);
 
-        let declared_class = test_input
-            .random_paymaster_account
+        let declared_class = hive
             .provider()
             .get_class(BlockId::Tag(BlockTag::Latest), declaration_hash?)
             .await?;
@@ -137,6 +137,8 @@ impl RunnableTrait for TestCase {
                 flattened_sierra_class.sierra_program, declared_class.sierra_program
             )
         );
+
+        println!("declare v3 success");
 
         Ok(Self {})
     }

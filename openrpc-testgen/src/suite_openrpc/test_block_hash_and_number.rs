@@ -1,6 +1,7 @@
 use starknet_types_core::felt::Felt;
 use starknet_types_rpc::{BlockId, MaybePendingBlockWithTxs};
 
+use crate::utils::starknet_hive::StarknetHive;
 use crate::{
     assert_result,
     utils::v7::{
@@ -24,11 +25,8 @@ impl RunnableTrait for TestCase {
     type Input = super::TestSuiteOpenRpc;
 
     async fn run(test_input: &Self::Input) -> Result<Self, OpenRpcTestGenError> {
-        let initial_block_hash_and_number = test_input
-            .random_paymaster_account
-            .provider()
-            .block_hash_and_number()
-            .await;
+        let hive = test_input.hive.clone();
+        let initial_block_hash_and_number = hive.provider().block_hash_and_number().await;
 
         let result = initial_block_hash_and_number.is_ok();
 
@@ -36,11 +34,7 @@ impl RunnableTrait for TestCase {
 
         let initial_block_hash_and_number = initial_block_hash_and_number?;
 
-        let initial_block_number = test_input
-            .random_paymaster_account
-            .provider()
-            .block_number()
-            .await?;
+        let initial_block_number = hive.provider().block_number().await?;
 
         assert_result!(
             initial_block_hash_and_number.block_number == initial_block_number,
@@ -50,8 +44,7 @@ impl RunnableTrait for TestCase {
             )
         );
 
-        let block_with_txs = test_input
-            .random_paymaster_account
+        let block_with_txs = hive
             .provider()
             .get_block_with_txs(BlockId::Number(initial_block_number))
             .await?;
@@ -75,8 +68,7 @@ impl RunnableTrait for TestCase {
 
         let transfer_amount = Felt::from_hex("0xfffffffffffffff")?;
 
-        let transfer_execution = test_input
-            .random_paymaster_account
+        let transfer_execution = hive
             .execute_v3(vec![Call {
                 to: Felt::from_hex(
                     "0x4718F5A0FC34CC1AF16A1CDEE98FFB20C31F5CD61D6AB07201858F4287C938D",
@@ -93,17 +85,9 @@ impl RunnableTrait for TestCase {
             .send()
             .await?;
 
-        wait_for_sent_transaction(
-            transfer_execution.transaction_hash,
-            &test_input.random_paymaster_account.random_accounts()?,
-        )
-        .await?;
+        wait_for_sent_transaction(transfer_execution.transaction_hash, &hive.account).await?;
 
-        let initial_block_hash_and_number = test_input
-            .random_paymaster_account
-            .provider()
-            .block_hash_and_number()
-            .await;
+        let initial_block_hash_and_number = hive.provider().block_hash_and_number().await;
 
         let result = initial_block_hash_and_number.is_ok();
 
@@ -111,11 +95,7 @@ impl RunnableTrait for TestCase {
 
         let initial_block_hash_and_number = initial_block_hash_and_number?;
 
-        let initial_block_number = test_input
-            .random_paymaster_account
-            .provider()
-            .block_number()
-            .await?;
+        let initial_block_number = hive.provider().block_number().await?;
 
         assert_result!(
             initial_block_hash_and_number.block_number == initial_block_number,
@@ -125,8 +105,7 @@ impl RunnableTrait for TestCase {
             )
         );
 
-        let block_with_txs = test_input
-            .random_paymaster_account
+        let block_with_txs = hive
             .provider()
             .get_block_with_txs(BlockId::Number(initial_block_number))
             .await?;
@@ -147,6 +126,8 @@ impl RunnableTrait for TestCase {
                 initial_block_hash_and_number.block_hash, initial_block_hash
             )
         );
+
+        println!("block hash and number success");
 
         Ok(Self {})
     }
