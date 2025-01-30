@@ -23,7 +23,7 @@ impl RunnableTrait for TestCase {
             Felt::from_hex("0x4718F5A0FC34CC1AF16A1CDEE98FFB20C31F5CD61D6AB07201858F4287C938D")?;
         let receiptent_address =
             Felt::from_hex("0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdead")?;
-        let transfer_amount = Felt::from_hex("0xfffffffffffffff")?;
+        let transfer_amount = Felt::from_hex("0xfffffffffffff")?;
         let sender = test_input.random_paymaster_account.random_accounts()?;
 
         let estimate_fee = sender

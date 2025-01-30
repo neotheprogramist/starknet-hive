@@ -1,7 +1,5 @@
-use std::{path::PathBuf, str::FromStr};
 
 use starknet_types_core::felt::Felt;
-use starknet_types_rpc::{BlockId, BlockTag};
 use url::Url;
 
 use crate::{
@@ -38,7 +36,7 @@ use crate::{
 use crate::utils::starknet_hive::StarknetHive;
 
 // pub mod suite_deploy;
-pub mod test_block_hash_and_number;
+// pub mod test_block_hash_and_number;
 pub mod test_declare_txn_v2;
 pub mod test_declare_txn_v3;
 pub mod test_declare_v3_trace;

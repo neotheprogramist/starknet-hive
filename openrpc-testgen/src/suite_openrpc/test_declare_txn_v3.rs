@@ -138,7 +138,6 @@ impl RunnableTrait for TestCase {
             )
         );
 
-        println!("declare v3 success");
 
         Ok(Self {})
     }

@@ -49,7 +49,7 @@ impl RunnableTrait for TestCase {
         )
         .await?;
 
-        let transfer_amount = Felt::from_hex("0xfffffffffffffff")?;
+        let transfer_amount = Felt::from_hex("0xfffffffffffff")?;
 
         let transfer_execution = hive
             .execute_v3(vec![Call {

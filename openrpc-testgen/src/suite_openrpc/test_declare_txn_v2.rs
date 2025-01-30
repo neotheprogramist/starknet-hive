@@ -1,10 +1,9 @@
 use serde_json::Value;
-use starknet_types_core::felt::Felt;
 use starknet_types_rpc::{BlockId, BlockTag};
 
 use crate::{
     assert_result,
-    utils::{starknet_hive::StarknetHive, v7::{
+    utils::v7::{
         accounts::account::{Account, AccountError, ConnectedAccount},
         endpoints::{
             declare_contract::{
@@ -15,8 +14,8 @@ use crate::{
             utils::wait_for_sent_transaction,
         },
         providers::provider::{Provider, ProviderError},
-    }},
-    RandomizableAccountsTrait, RunnableTrait,
+    },
+    RunnableTrait,
 };
 
 use std::{path::PathBuf, str::FromStr, sync::Arc};
@@ -44,12 +43,7 @@ impl RunnableTrait for TestCase {
             .await
         {
             Ok(result) => {
-                wait_for_sent_transaction(
-                    result.transaction_hash,
-                    &hive.account,
-                )
-                .await?;
-
+                wait_for_sent_transaction(result.transaction_hash, &hive.account).await?;
                 Ok(result.class_hash)
             }
             Err(AccountError::Signing(sign_error)) => {
@@ -140,7 +134,6 @@ impl RunnableTrait for TestCase {
                 flattened_sierra_class.sierra_program, declared_class.sierra_program
             )
         );
-        println!("declare v2 success");
 
         Ok(Self {})
     }

@@ -248,8 +248,6 @@ impl RunnableTrait for TestCase {
             )
         );
 
-        println!("trace declare v3 success");
-
         Ok(Self {})
     }
 }

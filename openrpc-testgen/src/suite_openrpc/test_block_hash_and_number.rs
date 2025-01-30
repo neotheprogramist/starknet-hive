@@ -66,7 +66,7 @@ impl RunnableTrait for TestCase {
             )
         );
 
-        let transfer_amount = Felt::from_hex("0xfffffffffffffff")?;
+        let transfer_amount = Felt::from_hex("0xfffffffffffff")?;
 
         let transfer_execution = hive
             .execute_v3(vec![Call {
@@ -126,8 +126,6 @@ impl RunnableTrait for TestCase {
                 initial_block_hash_and_number.block_hash, initial_block_hash
             )
         );
-
-        println!("block hash and number success");
 
         Ok(Self {})
     }
