@@ -19,7 +19,6 @@ use crate::{
                 utils::{get_selector_from_name, wait_for_sent_transaction},
             },
             providers::provider::{Provider, ProviderError},
-            signers::key_pair::SigningKey,
         },
     },
     RandomizableAccountsTrait, RunnableTrait,
@@ -27,7 +26,7 @@ use crate::{
 use cainome_cairo_serde::CairoSerde;
 use crypto_utils::hash::{poseidon_hash_many, PoseidonHasher};
 use rand::{rngs::StdRng, RngCore, SeedableRng};
-use starknet::core::crypto::{ecdsa_sign, ecdsa_verify};
+use starknet::core::crypto::ecdsa_sign;
 use starknet_types_core::felt::Felt;
 
 use starknet_types_rpc::{BlockId, BlockTag, TxnReceipt};
