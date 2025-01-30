@@ -14,25 +14,32 @@ use crate::{
                     extract_class_hash_from_error, get_compiled_contract,
                     parse_class_hash_from_error, RunnerError,
                 },
-                endpoints_functions::OutsideExecution,
+                endpoints_functions::{OutsideExecutionV2, StarknetDomain},
                 errors::{CallError, OpenRpcTestGenError},
                 utils::{get_selector_from_name, wait_for_sent_transaction},
             },
             providers::provider::{Provider, ProviderError},
+            signers::key_pair::SigningKey,
         },
     },
     RandomizableAccountsTrait, RunnableTrait,
 };
 use cainome_cairo_serde::CairoSerde;
+use crypto_utils::hash::{poseidon_hash_many, PoseidonHasher};
 use rand::{rngs::StdRng, RngCore, SeedableRng};
-use starknet::core::crypto::ecdsa_sign;
-use starknet_types_core::{
-    felt::Felt,
-    hash::{Poseidon, StarkHash},
-};
+use starknet::core::crypto::{ecdsa_sign, ecdsa_verify};
+use starknet_types_core::felt::Felt;
+
 use starknet_types_rpc::{BlockId, BlockTag, TxnReceipt};
 use std::path::PathBuf;
 use std::str::FromStr;
+
+pub const STARKNET_DOMAIN_TYPE_HASH: Felt =
+    Felt::from_hex_unchecked("0x1ff2f602e42168014d405a94f75e8a93d640751d71d16311266e140d8b0a210");
+pub const CALL_TYPE_HASH: Felt =
+    Felt::from_hex_unchecked("0x3635c7f2a7ba93844c0d064e18e487f35ab90f7c39d00f186a781fc3f0c2ca9");
+pub const OUTSIDE_EXECUTION_TYPE_HASH: Felt =
+    Felt::from_hex_unchecked("0x312b56c05a7965066ddbda31c016d8d05afc305071c0ca3cdc2192c3c2f1f0f");
 
 #[derive(Clone, Debug)]
 pub struct TestCase {}
@@ -188,22 +195,90 @@ impl RunnableTrait for TestCase {
             ],
         };
 
-        let outside_execution = OutsideExecution {
-            caller: test_input
+        let block_with_tx_hashes = test_input
+            .random_paymaster_account
+            .provider()
+            .get_block_with_tx_hashes(BlockId::Tag(BlockTag::Latest))
+            .await?;
+
+        let timestamp = match block_with_tx_hashes {
+            starknet_types_rpc::MaybePendingBlockWithTxHashes::Block(block) => {
+                block.block_header.timestamp
+            }
+            starknet_types_rpc::MaybePendingBlockWithTxHashes::Pending(block) => {
+                block.pending_block_header.timestamp
+            }
+        };
+
+        let nonce = test_input
+            .random_paymaster_account
+            .provider()
+            .get_nonce(
+                BlockId::Tag(BlockTag::Latest),
+                test_input.random_paymaster_account.address(),
+            )
+            .await?;
+
+        let domain = StarknetDomain {
+            name: Felt::from_bytes_be_slice(b"Account.execute_from_outside"),
+            version: Felt::TWO,
+            chain_id: test_input
                 .random_paymaster_account
-                .random_accounts()?
-                .address(),
-            nonce: Felt::ONE,
-            calls: vec![erc20_transfer_call],
+                .provider()
+                .chain_id()
+                .await?,
+            revision: Felt::ONE,
+        };
+
+        let domain_vec = vec![
+            STARKNET_DOMAIN_TYPE_HASH,
+            domain.name,
+            domain.version,
+            domain.chain_id,
+            domain.revision,
+        ];
+        let domain_hash = poseidon_hash_many(&domain_vec);
+
+        let outside_execution = OutsideExecutionV2 {
+            // caller: test_input.random_executable_account.address(),
+            caller: Felt::from_bytes_be_slice(b"ANY_CALLER"),
+            execute_before: timestamp + 500,
+            execute_after: timestamp - 500,
+            nonce: nonce + Felt::ONE,
+            calls: vec![erc20_transfer_call.clone()],
         };
 
         let outside_execution_cairo_serialized =
-            &OutsideExecution::cairo_serialize(&outside_execution);
+            &OutsideExecutionV2::cairo_serialize(&outside_execution);
 
-        let hash = Poseidon::hash_array(outside_execution_cairo_serialized);
+        // let hash = Poseidon::hash_array(outside_execution_cairo_serialized);
+
+        let mut hasher_call = PoseidonHasher::new();
+        hasher_call.update(CALL_TYPE_HASH);
+        hasher_call.update(erc20_transfer_call.to);
+        hasher_call.update(erc20_transfer_call.selector);
+        hasher_call.update(poseidon_hash_many(&erc20_transfer_call.calldata));
+        let hashed_call = hasher_call.finalize();
+
+        let mut hasher_outside_execution = PoseidonHasher::new();
+        hasher_outside_execution.update(OUTSIDE_EXECUTION_TYPE_HASH);
+        hasher_outside_execution.update(outside_execution.caller);
+        hasher_outside_execution.update(outside_execution.nonce);
+        hasher_outside_execution.update(Felt::from(outside_execution.execute_after));
+        hasher_outside_execution.update(Felt::from(outside_execution.execute_before));
+        hasher_outside_execution.update(poseidon_hash_many(vec![&hashed_call]));
+        let hash_outside_execution = hasher_outside_execution.finalize();
+
+        let mut final_hasher = PoseidonHasher::new();
+        final_hasher.update(Felt::from_bytes_be_slice(b"StarkNet Message"));
+        final_hasher.update(domain_hash);
+        final_hasher.update(test_input.random_executable_account.address());
+        final_hasher.update(hash_outside_execution);
+
+        let hash = final_hasher.finalize();
 
         let starknet::core::crypto::ExtendedSignature { r, s, v: _ } =
-            ecdsa_sign(&test_input.paymaster_private_key, &hash).unwrap();
+            ecdsa_sign(&test_input.executable_private_key, &hash).unwrap();
 
         let mut calldata_to_executable_account_call = outside_execution_cairo_serialized.clone();
         calldata_to_executable_account_call.push(Felt::from_dec_str("2")?);
@@ -215,7 +290,7 @@ impl RunnableTrait for TestCase {
                 .random_executable_account
                 .random_accounts()?
                 .address(),
-            selector: get_selector_from_name("execute_from_outside")?,
+            selector: get_selector_from_name("execute_from_outside_v2")?,
             calldata: calldata_to_executable_account_call,
         };
 
