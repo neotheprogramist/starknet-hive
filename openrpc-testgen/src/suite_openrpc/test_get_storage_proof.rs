@@ -5,7 +5,7 @@ use crate::{
     utils::{
         v7::{
             accounts::{
-                account::{starknet_keccak, Account, ConnectedAccount},
+                account::{Account, ConnectedAccount},
                 call::Call,
             },
             contract::factory::ContractFactory,
@@ -18,7 +18,7 @@ use crate::{
             },
             providers::provider::Provider,
         },
-        v8::types::{verify_merkle_proof, MerkleNode, MerkleTree},
+        v8::types::MerkleTreeMadara,
     },
     RandomizableAccountsTrait, RunnableTrait,
 };
@@ -26,7 +26,7 @@ use rand::{rngs::StdRng, RngCore, SeedableRng};
 use starknet::macros::short_string;
 use starknet_types_core::{
     felt::Felt,
-    hash::{Pedersen, Poseidon, StarkHash},
+    hash::{Poseidon, StarkHash},
 };
 use starknet_types_rpc::{BlockId, BlockTag, FunctionCall, TxnReceipt};
 
@@ -266,12 +266,11 @@ impl RunnableTrait for TestCase {
 
         println!("storage_proof {:#?}", storage_proof);
 
-        let is_valid_poseidon = verify_merkle_proof(
-            storage_proof.classes_proof.clone(),
-            storage_proof.global_roots.classes_tree_root.clone(),
-            Poseidon::hash,
+        let merkle_tree = MerkleTreeMadara::from_proof(
+            storage_proof.classes_proof,
+            storage_proof.global_roots.classes_tree_root,
         );
-        println!("{:#?}", is_valid_poseidon);
+        merkle_tree.compute_edge_hash();
 
         // assert_result!(is_valid_poseidon, "Poseidon proof invalid!");
 
