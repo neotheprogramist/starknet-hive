@@ -121,6 +121,7 @@ pub async fn get_compiled_contract(
             RunnerError::ReadFileError(e.to_string())
         }
     })?;
+
     let mut sierra = String::new();
     file.read_to_string(&mut sierra)
         .await
@@ -147,6 +148,42 @@ pub async fn get_compiled_contract(
     let flattened_class = contract_artifact.clone().flatten()?;
 
     Ok((flattened_class, casm_class_hash))
+}
+
+pub async fn get_compiled_contract_string(
+    sierra_path: PathBuf,
+    casm_path: PathBuf,
+) -> Result<(String, String), RunnerError> {
+    let mut file = tokio::fs::File::open(&sierra_path).await.map_err(|e| {
+        if e.kind() == std::io::ErrorKind::NotFound {
+            RunnerError::ReadFileError(
+                "Contract json file not found, please execute scarb build command".to_string(),
+            )
+        } else {
+            RunnerError::ReadFileError(e.to_string())
+        }
+    })?;
+
+    let mut sierra = String::new();
+    file.read_to_string(&mut sierra)
+        .await
+        .map_err(|e| RunnerError::ReadFileError(e.to_string()))?;
+
+    let mut file = tokio::fs::File::open(&casm_path).await.map_err(|e| {
+        if e.kind() == std::io::ErrorKind::NotFound {
+            RunnerError::ReadFileError(
+                "Contract json file not found, please execute scarb build command".to_string(),
+            )
+        } else {
+            RunnerError::ReadFileError(e.to_string())
+        }
+    })?;
+    let mut casm = String::new();
+    file.read_to_string(&mut casm)
+        .await
+        .map_err(|e| RunnerError::ReadFileError(e.to_string()))?;
+
+    Ok((sierra, casm))
 }
 
 pub async fn get_compiled_contract_from_string(
