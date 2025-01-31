@@ -200,6 +200,16 @@ where
         self.prepare().await?.send().await
     }
 
+    pub async fn send_with_custom_signature(
+        &self,
+        signature: Vec<Felt>,
+    ) -> Result<AddInvokeTransactionResult<Felt>, AccountError<A::SignError>> {
+        self.prepare()
+            .await?
+            .send_with_custom_signature(signature)
+            .await
+    }
+
     pub async fn prepare(&self) -> Result<PreparedExecutionV1<'a, A>, AccountError<A::SignError>> {
         // Resolves nonce
         let nonce = match self.nonce {
@@ -789,6 +799,22 @@ where
             .map_err(AccountError::Provider)
     }
 
+    pub async fn send_with_custom_signature(
+        &self,
+        signature: Vec<Felt>,
+    ) -> Result<AddInvokeTransactionResult<Felt>, AccountError<A::SignError>> {
+        let tx_request = self
+            .get_invoke_request_with_custom_signature(signature)
+            .await
+            .map_err(AccountError::Signing)?;
+
+        self.account
+            .provider()
+            .add_invoke_transaction(BroadcastedTxn::Invoke(BroadcastedInvokeTxn::V1(tx_request)))
+            .await
+            .map_err(AccountError::Provider)
+    }
+
     // The `simulate` function is temporarily removed until it's supported in [Provider]
     // TODO: add `simulate` back once transaction simulation in supported
 
@@ -806,6 +832,19 @@ where
                     .sign_execution_v1(&self.inner, query_only)
                     .await?
             },
+            nonce: self.inner.nonce,
+            sender_address: self.account.address(),
+            calldata: self.account.encode_calls(&self.inner.calls),
+        })
+    }
+
+    pub async fn get_invoke_request_with_custom_signature(
+        &self,
+        signature: Vec<Felt>,
+    ) -> Result<InvokeTxnV1<Felt>, A::SignError> {
+        Ok(InvokeTxnV1 {
+            max_fee: self.inner.max_fee,
+            signature,
             nonce: self.inner.nonce,
             sender_address: self.account.address(),
             calldata: self.account.encode_calls(&self.inner.calls),
