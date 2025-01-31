@@ -5,7 +5,7 @@ version.workspace = true
 
 [dependencies]
 clap.workspace = true
-crypto-utils.workspace = true
+crypto-utils = { path = "../crypto-utils" }
 serde_json.workspace = true
 serde.workspace = true
 sha3.workspace = true
