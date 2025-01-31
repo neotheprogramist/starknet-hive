@@ -37,7 +37,6 @@ impl RunnableTrait for TestCase {
         assert_result!(result);
 
         let estimate = estimate?;
-        println!("estimate: {estimate:#?}");
 
         let expected_price_unit = PriceUnit::Wei;
         assert_result!(

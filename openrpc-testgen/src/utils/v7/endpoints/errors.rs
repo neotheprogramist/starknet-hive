@@ -64,6 +64,8 @@ pub enum OpenRpcTestGenError {
     Conversions(#[from] ConversionsError),
     #[error(transparent)]
     JoinError(#[from] tokio::task::JoinError),
+    #[error(transparent)]
+    EcdsaSignError(#[from] starknet::core::crypto::EcdsaSignError),
     #[error("Unexpected block type {0}")]
     UnexpectedBlockResponseType(String),
     #[error("Unexpected txn type {0}")]

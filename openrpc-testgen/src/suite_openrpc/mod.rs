@@ -90,6 +90,7 @@ pub struct TestSuiteOpenRpc {
     pub random_paymaster_account: RandomSingleOwnerAccount,
     pub paymaster_private_key: Felt,
     pub random_executable_account: RandomSingleOwnerAccount,
+    pub executable_private_key: Felt,
     pub account_class_hash: Felt,
     pub udc_address: Felt,
 }
@@ -109,9 +110,9 @@ impl SetupableTrait for TestSuiteOpenRpc {
     async fn setup(setup_input: &Self::Input) -> Result<Self, OpenRpcTestGenError> {
         let (executable_account_flattened_sierra_class, executable_account_compiled_class_hash) =
             get_compiled_contract(
-                PathBuf::from_str("target/dev/contracts_ExecutableAccount.contract_class.json")?,
+                PathBuf::from_str("target/dev/contracts_MyAccountExec.contract_class.json")?,
                 PathBuf::from_str(
-                    "target/dev/contracts_ExecutableAccount.compiled_contract_class.json",
+                    "target/dev/contracts_MyAccountExec.compiled_contract_class.json",
                 )?,
             )
             .await?;
@@ -255,6 +256,7 @@ impl SetupableTrait for TestSuiteOpenRpc {
                 accounts: paymaster_accounts,
             },
             paymaster_private_key: setup_input.paymaster_private_key,
+            executable_private_key: executable_account_data.signing_key.secret_scalar(),
             account_class_hash: setup_input.account_class_hash,
             udc_address: setup_input.udc_address,
         })

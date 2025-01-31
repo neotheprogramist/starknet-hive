@@ -3,6 +3,7 @@ use crate::{
     utils::{
         conversions::felts_to_biguint::felts_slice_to_biguint,
         get_balance::get_balance,
+        outside_execution::{get_current_timestamp, prepare_outside_execution, OutsideExecution},
         v7::{
             accounts::{
                 account::{Account, AccountError, ConnectedAccount},
@@ -14,7 +15,6 @@ use crate::{
                     extract_class_hash_from_error, get_compiled_contract,
                     parse_class_hash_from_error, RunnerError,
                 },
-                endpoints_functions::OutsideExecution,
                 errors::{CallError, OpenRpcTestGenError},
                 utils::{get_selector_from_name, wait_for_sent_transaction},
             },
@@ -23,13 +23,9 @@ use crate::{
     },
     RandomizableAccountsTrait, RunnableTrait,
 };
-use cainome_cairo_serde::CairoSerde;
 use rand::{rngs::StdRng, RngCore, SeedableRng};
-use starknet::core::crypto::ecdsa_sign;
-use starknet_types_core::{
-    felt::Felt,
-    hash::{Poseidon, StarkHash},
-};
+use starknet_types_core::felt::Felt;
+
 use starknet_types_rpc::{BlockId, BlockTag, TxnReceipt};
 use std::path::PathBuf;
 use std::str::FromStr;
@@ -188,34 +184,47 @@ impl RunnableTrait for TestCase {
             ],
         };
 
+        let timestamp =
+            get_current_timestamp(test_input.random_paymaster_account.provider()).await?;
+
+        let nonce = test_input
+            .random_paymaster_account
+            .provider()
+            .get_nonce(
+                BlockId::Tag(BlockTag::Latest),
+                test_input.random_paymaster_account.address(),
+            )
+            .await?;
+
         let outside_execution = OutsideExecution {
-            caller: test_input
-                .random_paymaster_account
-                .random_accounts()?
-                .address(),
-            nonce: Felt::ONE,
-            calls: vec![erc20_transfer_call],
+            caller: test_input.random_paymaster_account.address(),
+            execute_before: timestamp + 500,
+            execute_after: timestamp - 500,
+            nonce: nonce + Felt::ONE,
+            calls: vec![erc20_transfer_call.clone()],
         };
 
-        let outside_execution_cairo_serialized =
-            &OutsideExecution::cairo_serialize(&outside_execution);
-
-        let hash = Poseidon::hash_array(outside_execution_cairo_serialized);
-
-        let starknet::core::crypto::ExtendedSignature { r, s, v: _ } =
-            ecdsa_sign(&test_input.paymaster_private_key, &hash).unwrap();
-
-        let mut calldata_to_executable_account_call = outside_execution_cairo_serialized.clone();
-        calldata_to_executable_account_call.push(Felt::from_dec_str("2")?);
-        calldata_to_executable_account_call.push(r);
-        calldata_to_executable_account_call.push(s);
+        let calldata_to_executable_account_call = prepare_outside_execution(
+            &outside_execution,
+            test_input
+                .random_executable_account
+                .random_accounts()?
+                .address(),
+            test_input.executable_private_key,
+            test_input
+                .random_paymaster_account
+                .provider()
+                .chain_id()
+                .await?,
+        )
+        .await?;
 
         let call_to_executable_account = Call {
             to: test_input
                 .random_executable_account
                 .random_accounts()?
                 .address(),
-            selector: get_selector_from_name("execute_from_outside")?,
+            selector: get_selector_from_name("execute_from_outside_v2")?,
             calldata: calldata_to_executable_account_call,
         };
 
