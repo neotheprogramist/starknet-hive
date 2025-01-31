@@ -370,23 +370,6 @@ pub struct OutsideExecution {
     pub calls: Vec<Call>,
 }
 
-#[derive(Debug, CairoSerde)]
-pub struct OutsideExecutionV2 {
-    pub caller: Felt,
-    pub nonce: Felt,
-    pub execute_after: u64,
-    pub execute_before: u64,
-    pub calls: Vec<Call>,
-}
-
-#[derive(Debug, CairoSerde)]
-pub struct StarknetDomain {
-    pub name: Felt,
-    pub version: Felt,
-    pub chain_id: Felt,
-    pub revision: Felt,
-}
-
 #[allow(clippy::too_many_arguments)]
 pub async fn add_declare_transaction_v2(
     url: Url,

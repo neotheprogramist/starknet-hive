@@ -12,8 +12,8 @@ use endpoints_functions::{
     get_class_at, get_class_hash_at, get_state_update, get_storage_at,
     get_transaction_by_block_id_and_index, get_transaction_by_hash_deploy_acc,
     get_transaction_by_hash_invoke, get_transaction_by_hash_non_existent_tx,
-    get_transaction_receipt, get_transaction_status_succeeded, invoke_contract_erc20_transfer,
-    invoke_contract_v1, invoke_contract_v3,
+    get_transaction_receipt, get_transaction_status_succeeded, invoke_contract_v1,
+    invoke_contract_v3,
 };
 use errors::OpenRpcTestGenError;
 use starknet_types_core::felt::Felt;
@@ -42,18 +42,18 @@ impl Rpc {
 }
 
 pub trait RpcEndpoints {
-    #[allow(clippy::too_many_arguments)]
-    fn invoke_contract_erc20_transfer(
-        &self,
-        sierra_path: &str,
-        casm_path: &str,
-        account_class_hash: Option<Felt>,
-        account_address: Option<Felt>,
-        private_key: Option<Felt>,
-        erc20_strk_contract_address: Option<Felt>,
-        erc20_eth_contract_address: Option<Felt>,
-        amount_per_test: Option<Felt>,
-    ) -> impl std::future::Future<Output = Result<Felt, OpenRpcTestGenError>>;
+    // #[allow(clippy::too_many_arguments)]
+    // fn invoke_contract_erc20_transfer(
+    //     &self,
+    //     sierra_path: &str,
+    //     casm_path: &str,
+    //     account_class_hash: Option<Felt>,
+    //     account_address: Option<Felt>,
+    //     private_key: Option<Felt>,
+    //     erc20_strk_contract_address: Option<Felt>,
+    //     erc20_eth_contract_address: Option<Felt>,
+    //     amount_per_test: Option<Felt>,
+    // ) -> impl std::future::Future<Output = Result<Felt, OpenRpcTestGenError>>;
 
     #[allow(clippy::too_many_arguments)]
     fn add_declare_transaction_v2(
@@ -304,30 +304,30 @@ pub trait RpcEndpoints {
 }
 
 impl RpcEndpoints for Rpc {
-    async fn invoke_contract_erc20_transfer(
-        &self,
-        sierra_path: &str,
-        casm_path: &str,
-        account_class_hash: Option<Felt>,
-        account_address: Option<Felt>,
-        private_key: Option<Felt>,
-        erc20_strk_contract_address: Option<Felt>,
-        erc20_eth_contract_address: Option<Felt>,
-        amount_per_test: Option<Felt>,
-    ) -> Result<Felt, OpenRpcTestGenError> {
-        invoke_contract_erc20_transfer(
-            self.url.clone(),
-            sierra_path,
-            casm_path,
-            account_class_hash,
-            account_address,
-            private_key,
-            erc20_strk_contract_address,
-            erc20_eth_contract_address,
-            amount_per_test,
-        )
-        .await
-    }
+    // async fn invoke_contract_erc20_transfer(
+    //     &self,
+    //     sierra_path: &str,
+    //     casm_path: &str,
+    //     account_class_hash: Option<Felt>,
+    //     account_address: Option<Felt>,
+    //     private_key: Option<Felt>,
+    //     erc20_strk_contract_address: Option<Felt>,
+    //     erc20_eth_contract_address: Option<Felt>,
+    //     amount_per_test: Option<Felt>,
+    // ) -> Result<Felt, OpenRpcTestGenError> {
+    //     invoke_contract_erc20_transfer(
+    //         self.url.clone(),
+    //         sierra_path,
+    //         casm_path,
+    //         account_class_hash,
+    //         account_address,
+    //         private_key,
+    //         erc20_strk_contract_address,
+    //         erc20_eth_contract_address,
+    //         amount_per_test,
+    //     )
+    //     .await
+    // }
 
     async fn add_declare_transaction_v2(
         &self,
@@ -808,33 +808,33 @@ pub async fn test_rpc_endpoints_v0_0_7(
     info!("{}", "⌛ Testing Rpc V7 endpoints -- START ⌛".yellow());
 
     let rpc = Rpc::new(url.clone())?;
-    match rpc
-        .invoke_contract_erc20_transfer(
-            sierra_path,
-            casm_path,
-            class_hash,
-            account_address,
-            private_key,
-            erc20_strk_contract_address,
-            erc20_eth_contract_address,
-            amount_per_test,
-        )
-        .await
-    {
-        Ok(_) => {
-            info!(
-                "{} {}",
-                "\n✓ Rpc Test paymaster via invoke erc20 transfer COMPATIBLE".green(),
-                "✓".green()
-            )
-        }
-        Err(e) => error!(
-            "{} {} {}",
-            "✗ Rpc Test paymaster via invoke erc20 transfer INCOMPATIBLE:".red(),
-            e.to_string().red(),
-            "✗".red()
-        ),
-    }
+    // match rpc
+    //     .invoke_contract_erc20_transfer(
+    //         sierra_path,
+    //         casm_path,
+    //         class_hash,
+    //         account_address,
+    //         private_key,
+    //         erc20_strk_contract_address,
+    //         erc20_eth_contract_address,
+    //         amount_per_test,
+    //     )
+    //     .await
+    // {
+    //     Ok(_) => {
+    //         info!(
+    //             "{} {}",
+    //             "\n✓ Rpc Test paymaster via invoke erc20 transfer COMPATIBLE".green(),
+    //             "✓".green()
+    //         )
+    //     }
+    //     Err(e) => error!(
+    //         "{} {} {}",
+    //         "✗ Rpc Test paymaster via invoke erc20 transfer INCOMPATIBLE:".red(),
+    //         e.to_string().red(),
+    //         "✗".red()
+    //     ),
+    // }
 
     match rpc
         .add_declare_transaction_v2(

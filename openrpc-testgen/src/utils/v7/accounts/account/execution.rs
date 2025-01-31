@@ -510,7 +510,7 @@ where
             },
         };
         let invoke = prepared
-            .get_invoke_request(true, skip_signature)
+            .get_invoke_request(false, skip_signature)
             .await
             .map_err(AccountError::Signing)?;
 
