@@ -1,26 +1,25 @@
 use crate::{
     assert_matches_result,
-    utils::v7::{
-        accounts::{
-            account::{Account, ConnectedAccount},
-            call::Call,
-            creation::create::{create_account, AccountType},
+    utils::{
+        outside_execution::{get_current_timestamp, prepare_outside_execution, OutsideExecution},
+        v7::{
+            accounts::{
+                account::{Account, ConnectedAccount},
+                call::Call,
+                creation::create::{create_account, AccountType},
+            },
+            endpoints::{
+                errors::OpenRpcTestGenError,
+                utils::{get_selector_from_name, wait_for_sent_transaction},
+            },
+            providers::provider::Provider,
         },
-        endpoints::{
-            endpoints_functions::OutsideExecution,
-            errors::OpenRpcTestGenError,
-            utils::{get_selector_from_name, wait_for_sent_transaction},
-        },
-        providers::provider::Provider,
     },
     RandomizableAccountsTrait, RunnableTrait,
 };
-use cainome_cairo_serde::CairoSerde;
-use starknet::core::crypto::ecdsa_sign;
-use starknet_types_core::{
-    felt::Felt,
-    hash::{Poseidon, StarkHash},
-};
+
+use starknet_types_core::felt::Felt;
+
 use starknet_types_rpc::{BlockId, BlockTag, InvokeTxn, MaybePendingBlockWithTxs, Txn};
 
 #[derive(Clone, Debug)]
@@ -38,6 +37,15 @@ impl RunnableTrait for TestCase {
         )
         .await?;
 
+        let nonce = test_input
+            .random_paymaster_account
+            .provider()
+            .get_nonce(
+                BlockId::Tag(BlockTag::Latest),
+                test_input.random_paymaster_account.address(),
+            )
+            .await?;
+
         let udc_call = Call {
             to: Felt::from_hex_unchecked(
                 "0x041a78e741e5af2fec34b695679bc6891742439f7afb8484ecd7766661ad02bf",
@@ -52,31 +60,37 @@ impl RunnableTrait for TestCase {
             ],
         };
 
+        let timestamp =
+            get_current_timestamp(&test_input.random_paymaster_account.provider()).await?;
+
         let outside_execution = OutsideExecution {
             caller: test_input.random_paymaster_account.address(),
-            nonce: Felt::ZERO,
+            execute_before: timestamp + 500,
+            execute_after: timestamp - 500,
+            nonce: nonce + Felt::ONE,
             calls: vec![udc_call],
         };
 
-        let outside_execution_cairo_serialized =
-            &OutsideExecution::cairo_serialize(&outside_execution);
-
-        let hash = Poseidon::hash_array(outside_execution_cairo_serialized);
-
-        let starknet::core::crypto::ExtendedSignature { r, s, v: _ } =
-            ecdsa_sign(&test_input.paymaster_private_key, &hash).unwrap();
-
-        let mut calldata_to_executable_account_call = outside_execution_cairo_serialized.clone();
-        calldata_to_executable_account_call.push(Felt::from_dec_str("2")?);
-        calldata_to_executable_account_call.push(r);
-        calldata_to_executable_account_call.push(s);
-
+        let calldata_to_executable_account_call = prepare_outside_execution(
+            &outside_execution,
+            test_input
+                .random_executable_account
+                .random_accounts()?
+                .address(),
+            test_input.executable_private_key,
+            test_input
+                .random_paymaster_account
+                .provider()
+                .chain_id()
+                .await?,
+        )
+        .await?;
         let call_to_executable_account = Call {
             to: test_input
                 .random_executable_account
                 .random_accounts()?
                 .address(),
-            selector: get_selector_from_name("execute_from_outside")?,
+            selector: get_selector_from_name("execute_from_outside_v2")?,
             calldata: calldata_to_executable_account_call,
         };
 
