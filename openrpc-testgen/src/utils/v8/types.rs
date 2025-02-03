@@ -115,6 +115,9 @@ pub enum ProofError {
 
     #[error("Missing contract leaves data for contract {contract_address:?}.")]
     MissingContractLeavesData { contract_address: Felt },
+
+    #[error("Missing contract leaves data for contract {contract_address:?} at slot {slot:?}.")]
+    MissingContractStorageProofData { contract_address: Felt, slot: Felt },
 }
 
 impl MerkleTreeMadara {
@@ -135,7 +138,7 @@ impl MerkleTreeMadara {
     ///
     /// A `MerkleTreeMadara` instance with nodes and their parent relationships
     /// reconstructed from the provided proof.
-    pub fn from_proof(proof: Vec<NodeHashToNodeMappingItem>, root_hash: Felt) -> Self {
+    pub fn from_proof(proof: Vec<NodeHashToNodeMappingItem>, root_hash: Option<Felt>) -> Self {
         let mut nodes = HashMap::new();
         let mut child_to_parent = HashMap::new();
 
@@ -162,6 +165,16 @@ impl MerkleTreeMadara {
                 },
             );
         }
+
+        // In certain scenarios (contract storage proof), the root hash needs to be found before the computation
+        let root_hash = root_hash.unwrap_or_else(|| {
+            nodes
+                .iter()
+                .find(|(_, node)| node.parent_hash.is_none())
+                .map(|(key, _)| *key)
+                .expect("Failed to determine root hash from proof")
+        });
+
         let merkle_tree_madara = MerkleTreeMadara {
             nodes,
             root: root_hash,

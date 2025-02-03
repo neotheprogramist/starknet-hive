@@ -61,7 +61,7 @@ impl RunnableTrait for TestCase {
 
         let merkle_tree = MerkleTreeMadara::from_proof(
             storage_proof.classes_proof,
-            storage_proof.global_roots.classes_tree_root,
+            Some(storage_proof.global_roots.classes_tree_root),
         );
 
         let expected_child =

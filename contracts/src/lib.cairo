@@ -28,6 +28,7 @@ mod smpl18;
 mod smpl19;
 mod smpl20;
 mod smpl21;
+mod smpl22;
 mod exec_acc;
 
 /// Paymaster implementation.
