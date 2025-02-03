@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use starknet::macros::short_string;
 use starknet_types_core::{
     felt::Felt,
-    hash::{Poseidon, StarkHash},
+    hash::{Pedersen, Poseidon, StarkHash},
 };
 use starknet_types_rpc::BlockId;
 use std::collections::HashMap;
@@ -82,6 +82,8 @@ pub struct GlobalRoots {
     pub block_hash: Felt,
 }
 
+type HashFn = fn(&Felt, &Felt) -> Felt;
+
 const CONTRACT_CLASS_LEAF_V0: Felt = short_string!("CONTRACT_CLASS_LEAF_V0");
 
 #[derive(Debug, Error)]
@@ -110,6 +112,9 @@ pub enum ProofError {
         child: Felt,
         node_hash: Felt,
     },
+
+    #[error("Missing contract leaves data for contract {contract_address:?}.")]
+    MissingContractLeavesData { contract_address: Felt },
 }
 
 impl MerkleTreeMadara {
@@ -190,58 +195,40 @@ impl MerkleTreeMadara {
         })
     }
 
-    /// Computes the hash of an edge node in the Merkle tree, using the given path and length.
+    /// Computes the hash of a given `MadaraTreeNode` using the specified hash function.
     ///
     /// # Arguments
     ///
-    /// * `edge` - A reference to the `MadaraTreeNode` containing the edge node to be hashed.
+    /// * `node` - A reference to a `MadaraTreeNode` for which the hash needs to be computed.
+    /// * `hash_fn` - A function that takes two `Felt` references and returns their combined hash as a `Felt`.
     ///
     /// # Returns
     ///
-    /// An `Ok` containing the hash of the edge node if it is an edge node, or an `Err`
-    /// containing a `ProofError` if it is not an edge node.
-    pub fn compute_edge_hash(&self, edge: &MadaraTreeNode) -> Result<Felt, ProofError> {
-        if let MerkleNode::Edge {
-            child,
-            path,
-            length,
-        } = &edge.node
-        {
-            let edge_hash = Poseidon::hash(child, path) + Felt::from(*length);
-            Ok(edge_hash)
-        } else {
-            Err(ProofError::ExpectedEdgeNode)
-        }
-    }
-
-    /// Computes the hash of a binary node in the Merkle tree.
+    /// A `Result` containing the computed hash as `Felt` if successful, or a `ProofError` if an error occurs.
     ///
-    /// # Arguments
-    ///
-    /// * `binary_node` - A reference to the `MadaraTreeNode` containing the binary node
-    ///   to be hashed.
-    ///
-    /// # Returns
-    ///
-    /// An `Ok` containing the hash of the binary node if it is a binary node, or an `Err`
-    /// containing a `ProofError` if it is not a binary node.
-    pub fn compute_binary_node_hash(
+    /// The hashing process differs based on the type of `MerkleNode`:
+    /// - For `Binary` nodes, the hash is computed from the `left` and `right` fields.
+    /// - For `Edge` nodes, the hash is computed from the `child` and `path` fields, with the `length` added to the result.
+    pub fn compute_node_hash(
         &self,
-        binary_node: &MadaraTreeNode,
+        node: &MadaraTreeNode,
+        hash_fn: HashFn,
     ) -> Result<Felt, ProofError> {
-        if let MerkleNode::Binary { left, right } = &binary_node.node {
-            let binary_hash = Poseidon::hash(left, right);
-            Ok(binary_hash)
-        } else {
-            Err(ProofError::ExpectedBinaryNode)
+        match &node.node {
+            MerkleNode::Binary { left, right } => Ok(hash_fn(left, right)),
+            MerkleNode::Edge {
+                child,
+                path,
+                length,
+            } => Ok(hash_fn(child, path) + Felt::from(*length)),
         }
     }
 
-    /// Verifies the proof of a class hash in the Merkle tree.
+    /// Verifies the storatge proof in the Merkle tree.
     ///
     /// # Arguments
     ///
-    /// * `compiled_class_hash` - The compiled class hash to be verified.
+    /// * `expected_child` - The expected child child value of edge node
     ///
     /// # Returns
     ///
@@ -249,23 +236,19 @@ impl MerkleTreeMadara {
     ///
     /// The verification process works as follows:
     ///
-    /// 1. Compute the expected child hash of the compiled class hash.
-    /// 2. Find the edge node in the Merkle tree with the given expected child hash.
-    /// 3. Compute the hash of the edge node.
-    /// 4. Iterate over the parents of the edge node until the root of the Merkle tree
+    /// 1. Find the edge node in the Merkle tree with the given expected child hash.
+    /// 2. Compute the hash of the edge node.
+    /// 3. Iterate over the parents of the edge node until the root of the Merkle tree
     ///    is reached. For each parent, check that the child field matches the current
     ///    hash, and if so, compute the hash of the parent.
-    /// 5. If the final computed root matches the root of the Merkle tree, return
+    /// 4. If the final computed root matches the root of the Merkle tree, return
     ///    `true`, otherwise return an error.
-    pub fn verify_class_proof(&self, compiled_class_hash: &Felt) -> Result<bool, ProofError> {
-        let expected_child = self.compute_expected_child(compiled_class_hash);
-
+    pub fn verify_proof(&self, expected_child: &Felt, hash_fn: HashFn) -> Result<bool, ProofError> {
         let edge_node = self
-            .find_matching_edge_node(&expected_child)
-            .ok_or_else(|| ProofError::NoMatchingEdgeNode(expected_child))?;
+            .find_matching_edge_node(expected_child)
+            .ok_or_else(|| ProofError::NoMatchingEdgeNode(*expected_child))?;
         let mut current_node = edge_node;
-
-        let mut current_hash = self.compute_edge_hash(current_node)?;
+        let mut current_hash = self.compute_node_hash(current_node, hash_fn)?;
 
         while let Some(parent_hash) = current_node.parent_hash {
             let parent = self
@@ -273,6 +256,7 @@ impl MerkleTreeMadara {
                 .get(&parent_hash)
                 .ok_or_else(|| ProofError::NoParentFound(parent_hash))?;
 
+            // Check if the computed hash is equal to any of the parent's children, or if it matches the parent's child field
             match &parent.node {
                 MerkleNode::Binary { left, right } => {
                     if *left != current_hash && *right != current_hash {
@@ -283,7 +267,6 @@ impl MerkleTreeMadara {
                             node_hash: parent.node_hash,
                         });
                     }
-                    current_hash = self.compute_binary_node_hash(parent)?;
                 }
                 MerkleNode::Edge { child, .. } => {
                     if *child != current_hash {
@@ -293,19 +276,32 @@ impl MerkleTreeMadara {
                             node_hash: parent.node_hash,
                         });
                     }
-                    current_hash = self.compute_edge_hash(parent)?;
                 }
             }
 
+            current_hash = self.compute_node_hash(parent, hash_fn)?;
             current_node = parent;
         }
 
-        println!("Final computed root: {:#?}", current_hash);
         Ok(current_hash == self.root)
     }
 
-    fn compute_expected_child(&self, compiled_class_hash: &Felt) -> Felt {
+    pub fn compute_expected_child_for_class_proof(&self, compiled_class_hash: &Felt) -> Felt {
+        // https://docs.starknet.io/architecture-and-concepts/network-architecture/starknet-state/
         Poseidon::hash(&CONTRACT_CLASS_LEAF_V0, &compiled_class_hash)
+    }
+
+    pub fn compute_expected_child_for_contract_proof(
+        &self,
+        class_hash: &Felt,
+        storage_root: &Felt,
+        nonce: &Felt,
+    ) -> Felt {
+        // https://docs.starknet.io/architecture-and-concepts/network-architecture/starknet-state/
+        let hash1 = Pedersen::hash(class_hash, storage_root);
+        let hash2 = Pedersen::hash(&hash1, nonce);
+        let expected_leaf = Pedersen::hash(&hash2, &Felt::ZERO);
+        expected_leaf
     }
 }
 
@@ -387,8 +383,8 @@ mod tests {
         let compiled_class_hash =
             Felt::from_hex("0x462f79bccfd948fc9f47936f18729ed2850113f5f3f487b1a70ee208c7d79e0")
                 .unwrap();
-
-        let valid = tree.verify_class_proof(&compiled_class_hash)?;
+        let expected_child = tree.compute_expected_child_for_class_proof(&compiled_class_hash);
+        let valid = tree.verify_proof(&expected_child, Poseidon::hash)?;
         assert!(valid);
         Ok(())
     }
@@ -467,8 +463,8 @@ mod tests {
         let compiled_class_hash =
             Felt::from_hex("0x462f79bccfd948fc9f47936f18729ed2850113f5f3f487b1a70ee208c7d79e0")
                 .unwrap();
-
-        let valid = tree.verify_class_proof(&compiled_class_hash)?;
+        let expected_child = tree.compute_expected_child_for_class_proof(&compiled_class_hash);
+        let valid = tree.verify_proof(&expected_child, Poseidon::hash)?;
         assert!(!valid);
         Ok(())
     }

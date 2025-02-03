@@ -1,7 +1,3 @@
-use clap::error;
-use starknet_types_core::felt::FromStrError;
-use thiserror::Error;
-
 use super::declare_contract::RunnerError;
 use crate::{
     macros::macros_errors::AssertionNoPanicError,
@@ -19,7 +15,10 @@ use crate::{
     },
 };
 use core::fmt::{Display, Formatter, Result};
+use starknet_types_core::felt::FromStrError;
 use std::{collections::HashMap, convert::Infallible, num::ParseIntError};
+use thiserror::Error;
+
 #[derive(Error, Debug)]
 pub enum OpenRpcTestGenError {
     #[error(transparent)]

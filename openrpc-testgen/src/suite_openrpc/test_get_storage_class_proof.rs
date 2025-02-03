@@ -15,6 +15,7 @@ use crate::{
     },
     RandomizableAccountsTrait, RunnableTrait,
 };
+use starknet_types_core::hash::{Poseidon, StarkHash};
 use starknet_types_rpc::{BlockId, BlockTag};
 
 #[derive(Clone, Debug)]
@@ -26,10 +27,10 @@ impl RunnableTrait for TestCase {
     async fn run(test_input: &Self::Input) -> Result<Self, OpenRpcTestGenError> {
         let (flattened_sierra_class, compiled_class_hash) = get_compiled_contract(
             PathBuf::from_str(
-                "target/dev/contracts_contracts_smpl15_HelloStarknet.contract_class.json",
+                "target/dev/contracts_contracts_smpl20_HelloStarknet.contract_class.json",
             )?,
             PathBuf::from_str(
-                "target/dev/contracts_contracts_smpl15_HelloStarknet.compiled_contract_class.json",
+                "target/dev/contracts_contracts_smpl20_HelloStarknet.compiled_contract_class.json",
             )?,
         )
         .await?;
@@ -63,7 +64,9 @@ impl RunnableTrait for TestCase {
             storage_proof.global_roots.classes_tree_root,
         );
 
-        let valid_proof = merkle_tree.verify_class_proof(&compiled_class_hash)?;
+        let expected_child =
+            merkle_tree.compute_expected_child_for_class_proof(&compiled_class_hash);
+        let valid_proof = merkle_tree.verify_proof(&expected_child, Poseidon::hash)?;
         assert_result!(valid_proof, "Class proof verification failed");
 
         Ok(Self {})
