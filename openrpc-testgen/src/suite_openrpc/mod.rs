@@ -84,7 +84,7 @@ use crate::{
 // pub mod test_syncing;
 // pub mod test_trace_block_txn_declare;
 // pub mod test_trace_block_txn_deploy_acc;
-pub mod test_get_storage_proof;
+pub mod test_get_storage_class_proof;
 
 #[derive(Clone, Debug)]
 pub struct TestSuiteOpenRpc {

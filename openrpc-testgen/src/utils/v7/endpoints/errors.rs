@@ -1,3 +1,4 @@
+use clap::error;
 use starknet_types_core::felt::FromStrError;
 use thiserror::Error;
 
@@ -14,6 +15,7 @@ use crate::{
             providers::provider::ProviderError,
             signers::local_wallet::SignError,
         },
+        v8::types::ProofError,
     },
 };
 use core::fmt::{Display, Formatter, Result};
@@ -94,6 +96,8 @@ pub enum OpenRpcTestGenError {
     TestSuiteFailure {
         failed_tests: HashMap<String, String>,
     },
+    #[error(transparent)]
+    Proof(#[from] ProofError),
 }
 
 #[derive(PartialEq, Eq, Debug, Error)]
