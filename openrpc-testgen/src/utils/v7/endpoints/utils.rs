@@ -113,6 +113,7 @@ pub fn get_storage_var_address(var_name: &str, args: &[Felt]) -> Result<Felt, No
     }
 }
 
+#[allow(clippy::result_large_err)]
 pub fn validate_inputs(
     account_address: Option<Felt>,
     private_key: Option<Felt>,

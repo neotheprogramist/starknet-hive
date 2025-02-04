@@ -15,6 +15,8 @@ use starknet_types_rpc::{
 
 use std::{any::Any, error::Error, fmt::Debug};
 
+use crate::utils::v8::types::{ContractStorageKeysItem, GetStorageProofResult};
+
 use super::jsonrpc::StarknetError;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -58,6 +60,14 @@ pub trait Provider {
         key: Felt,
         block_id: BlockId<Felt>,
     ) -> impl std::future::Future<Output = Result<Felt, ProviderError>>;
+
+    fn get_storage_proof(
+        &self,
+        block_id: BlockId<Felt>,
+        class_hashes: Option<Vec<Felt>>,
+        contract_addresses: Option<Vec<Felt>>,
+        contracts_storage_keys: Option<Vec<ContractStorageKeysItem>>,
+    ) -> impl std::future::Future<Output = Result<GetStorageProofResult, ProviderError>>;
 
     /// Gets the transaction status (possibly reflecting that the tx is still in
     /// the mempool, or dropped from it)

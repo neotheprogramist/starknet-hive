@@ -33,6 +33,7 @@ pub struct Rpc {
 }
 
 impl Rpc {
+    #[allow(clippy::result_large_err)]
     pub fn new(url: Url) -> Result<Self, OpenRpcTestGenError> {
         Ok(Self { url })
     }

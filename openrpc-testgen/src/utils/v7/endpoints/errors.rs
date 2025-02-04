@@ -1,6 +1,3 @@
-use starknet_types_core::felt::FromStrError;
-use thiserror::Error;
-
 use super::declare_contract::RunnerError;
 use crate::{
     macros::macros_errors::AssertionNoPanicError,
@@ -14,10 +11,14 @@ use crate::{
             providers::provider::ProviderError,
             signers::local_wallet::SignError,
         },
+        v8::types::ProofError,
     },
 };
 use core::fmt::{Display, Formatter, Result};
+use starknet_types_core::felt::FromStrError;
 use std::{collections::HashMap, convert::Infallible, num::ParseIntError};
+use thiserror::Error;
+
 #[derive(Error, Debug)]
 pub enum OpenRpcTestGenError {
     #[error(transparent)]
@@ -94,6 +95,8 @@ pub enum OpenRpcTestGenError {
     TestSuiteFailure {
         failed_tests: HashMap<String, String>,
     },
+    #[error(transparent)]
+    Proof(#[from] ProofError),
 }
 
 #[derive(PartialEq, Eq, Debug, Error)]
