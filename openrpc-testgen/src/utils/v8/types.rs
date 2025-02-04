@@ -175,12 +175,10 @@ impl MerkleTree {
                 .expect("Failed to determine root hash from proof")
         });
 
-        let merkle_tree = MerkleTree {
+        MerkleTree {
             nodes,
             root: root_hash,
-        };
-
-        merkle_tree
+        }
     }
 
     /// Finds and returns a reference to the `TreeNode` containing an edge node
@@ -207,7 +205,7 @@ impl MerkleTree {
             }
         })
     }
-
+    #[allow(clippy::result_large_err)]
     /// Computes the hash of a given `TreeNode` using the specified hash function.
     ///
     /// # Arguments
@@ -233,6 +231,7 @@ impl MerkleTree {
         }
     }
 
+    #[allow(clippy::result_large_err)]
     /// Verifies the storatge proof in the Merkle tree.
     ///
     /// # Arguments
@@ -255,7 +254,7 @@ impl MerkleTree {
     pub fn verify_proof(&self, expected_child: &Felt, hash_fn: HashFn) -> Result<bool, ProofError> {
         let edge_node = self
             .find_matching_edge_node(expected_child)
-            .ok_or_else(|| ProofError::NoMatchingEdgeNode(*expected_child))?;
+            .ok_or(ProofError::NoMatchingEdgeNode(*expected_child))?;
         let mut current_node = edge_node;
         let mut current_hash = self.compute_node_hash(current_node, hash_fn)?;
 
@@ -263,7 +262,7 @@ impl MerkleTree {
             let parent = self
                 .nodes
                 .get(&parent_hash)
-                .ok_or_else(|| ProofError::NoParentFound(parent_hash))?;
+                .ok_or(ProofError::NoParentFound(parent_hash))?;
 
             // Check if the computed hash is equal to any of the parent's children, or if it matches the parent's child field
             match &parent.node {
@@ -297,7 +296,7 @@ impl MerkleTree {
 
     pub fn compute_expected_child_for_class_proof(&self, compiled_class_hash: &Felt) -> Felt {
         // https://docs.starknet.io/architecture-and-concepts/network-architecture/starknet-state/
-        Poseidon::hash(&CONTRACT_CLASS_LEAF_V0, &compiled_class_hash)
+        Poseidon::hash(&CONTRACT_CLASS_LEAF_V0, compiled_class_hash)
     }
 
     pub fn compute_expected_child_for_contract_proof(
@@ -309,8 +308,7 @@ impl MerkleTree {
         // https://docs.starknet.io/architecture-and-concepts/network-architecture/starknet-state/
         let hash1 = Pedersen::hash(class_hash, storage_root);
         let hash2 = Pedersen::hash(&hash1, nonce);
-        let expected_leaf = Pedersen::hash(&hash2, &Felt::ZERO);
-        expected_leaf
+        Pedersen::hash(&hash2, &Felt::ZERO)
     }
 }
 

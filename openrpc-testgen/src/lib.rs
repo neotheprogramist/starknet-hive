@@ -32,6 +32,7 @@ pub trait SetupableTrait: Sized {
 }
 
 pub trait RandomizableAccountsTrait {
+    #[allow(clippy::result_large_err)]
     fn random_accounts(
         &self,
     ) -> Result<SingleOwnerAccount<JsonRpcClient<HttpTransport>, LocalWallet>, OpenRpcTestGenError>;
