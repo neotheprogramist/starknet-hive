@@ -11,7 +11,7 @@ use crate::{
             },
             providers::provider::Provider,
         },
-        v8::types::MerkleTreeMadara,
+        v8::types::MerkleTree,
     },
     RandomizableAccountsTrait, RunnableTrait,
 };
@@ -59,7 +59,7 @@ impl RunnableTrait for TestCase {
             )
             .await?;
 
-        let merkle_tree = MerkleTreeMadara::from_proof(
+        let merkle_tree = MerkleTree::from_proof(
             storage_proof.classes_proof,
             Some(storage_proof.global_roots.classes_tree_root),
         );

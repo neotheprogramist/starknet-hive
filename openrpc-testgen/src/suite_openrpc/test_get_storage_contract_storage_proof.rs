@@ -18,7 +18,7 @@ use crate::{
             },
             providers::provider::Provider,
         },
-        v8::types::{ContractStorageKeysItem, MerkleTreeMadara, ProofError},
+        v8::types::{ContractStorageKeysItem, MerkleTree, ProofError},
     },
     RandomizableAccountsTrait, RunnableTrait,
 };
@@ -182,7 +182,7 @@ impl RunnableTrait for TestCase {
                 })
             })?;
 
-        let merkle_tree = MerkleTreeMadara::from_proof(contract_storage_proof, None);
+        let merkle_tree = MerkleTree::from_proof(contract_storage_proof, None);
         let expected_child = balance_increase;
 
         let valid_proof = merkle_tree.verify_proof(&expected_child, Pedersen::hash)?;

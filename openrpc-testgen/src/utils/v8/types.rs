@@ -37,13 +37,13 @@ pub struct NodeHashToNodeMappingItem {
 }
 
 #[derive(Debug)]
-pub struct MerkleTreeMadara {
-    nodes: HashMap<Felt, MadaraTreeNode>,
+pub struct MerkleTree {
+    nodes: HashMap<Felt, TreeNode>,
     root: Felt,
 }
 
 #[derive(Debug, Clone)]
-pub struct MadaraTreeNode {
+pub struct TreeNode {
     pub node: MerkleNode,
     pub node_hash: Felt,
     pub parent_hash: Option<Felt>,
@@ -120,8 +120,8 @@ pub enum ProofError {
     MissingContractStorageProofData { contract_address: Felt, slot: Felt },
 }
 
-impl MerkleTreeMadara {
-    /// Constructs a `MerkleTreeMadara` from a given proof and root hash.
+impl MerkleTree {
+    /// Constructs a `MerkleTree` from a given proof and root hash.
     ///
     /// This function processes a vector of `NodeHashToNodeMappingItem`, which represents
     /// the nodes in a Merkle tree, to reconstruct the tree structure. It creates a map
@@ -136,7 +136,7 @@ impl MerkleTreeMadara {
     ///
     /// # Returns
     ///
-    /// A `MerkleTreeMadara` instance with nodes and their parent relationships
+    /// A `MerkleTree` instance with nodes and their parent relationships
     /// reconstructed from the provided proof.
     pub fn from_proof(proof: Vec<NodeHashToNodeMappingItem>, root_hash: Option<Felt>) -> Self {
         let mut nodes = HashMap::new();
@@ -158,7 +158,7 @@ impl MerkleTreeMadara {
             let parent_hash = child_to_parent.get(&node.node_hash).copied();
             nodes.insert(
                 node.node_hash,
-                MadaraTreeNode {
+                TreeNode {
                     node: node.node,
                     node_hash: node.node_hash,
                     parent_hash,
@@ -175,15 +175,15 @@ impl MerkleTreeMadara {
                 .expect("Failed to determine root hash from proof")
         });
 
-        let merkle_tree_madara = MerkleTreeMadara {
+        let merkle_tree = MerkleTree {
             nodes,
             root: root_hash,
         };
 
-        merkle_tree_madara
+        merkle_tree
     }
 
-    /// Finds and returns a reference to the `MadaraTreeNode` containing an edge node
+    /// Finds and returns a reference to the `TreeNode` containing an edge node
     /// whose child field matches the given `expected_child`.
     ///
     /// This function iterates over all nodes in the Merkle tree and checks if they
@@ -196,9 +196,9 @@ impl MerkleTreeMadara {
     ///
     /// # Returns
     ///
-    /// An `Option` containing a reference to the matching `MadaraTreeNode` if found,
+    /// An `Option` containing a reference to the matching `TreeNode` if found,
     /// or `None` if no such node exists.
-    pub fn find_matching_edge_node(&self, expected_child: &Felt) -> Option<&MadaraTreeNode> {
+    pub fn find_matching_edge_node(&self, expected_child: &Felt) -> Option<&TreeNode> {
         self.nodes.values().find(|node| {
             if let MerkleNode::Edge { child, .. } = &node.node {
                 child == expected_child
@@ -208,11 +208,11 @@ impl MerkleTreeMadara {
         })
     }
 
-    /// Computes the hash of a given `MadaraTreeNode` using the specified hash function.
+    /// Computes the hash of a given `TreeNode` using the specified hash function.
     ///
     /// # Arguments
     ///
-    /// * `node` - A reference to a `MadaraTreeNode` for which the hash needs to be computed.
+    /// * `node` - A reference to a `TreeNode` for which the hash needs to be computed.
     /// * `hash_fn` - A function that takes two `Felt` references and returns their combined hash as a `Felt`.
     ///
     /// # Returns
@@ -222,11 +222,7 @@ impl MerkleTreeMadara {
     /// The hashing process differs based on the type of `MerkleNode`:
     /// - For `Binary` nodes, the hash is computed from the `left` and `right` fields.
     /// - For `Edge` nodes, the hash is computed from the `child` and `path` fields, with the `length` added to the result.
-    pub fn compute_node_hash(
-        &self,
-        node: &MadaraTreeNode,
-        hash_fn: HashFn,
-    ) -> Result<Felt, ProofError> {
+    pub fn compute_node_hash(&self, node: &TreeNode, hash_fn: HashFn) -> Result<Felt, ProofError> {
         match &node.node {
             MerkleNode::Binary { left, right } => Ok(hash_fn(left, right)),
             MerkleNode::Edge {
@@ -392,7 +388,7 @@ mod tests {
         let root_hash =
             Felt::from_hex("0x2085dc49422286bbf425f254038cc9cd9a1d4759e7dcc1bb8c9cf1226d0930a")
                 .unwrap();
-        let tree = MerkleTreeMadara::from_proof(proof, root_hash);
+        let tree = MerkleTree::from_proof(proof, Some(root_hash));
         let compiled_class_hash =
             Felt::from_hex("0x462f79bccfd948fc9f47936f18729ed2850113f5f3f487b1a70ee208c7d79e0")
                 .unwrap();
@@ -472,7 +468,7 @@ mod tests {
         let root_hash =
             Felt::from_hex("0x2085dc49422286bbf425f254038cc9cd9a1d4759e7dcc1bb8c9cf1226d0930a")
                 .unwrap();
-        let tree = MerkleTreeMadara::from_proof(proof, root_hash);
+        let tree = MerkleTree::from_proof(proof, Some(root_hash));
         let compiled_class_hash =
             Felt::from_hex("0x462f79bccfd948fc9f47936f18729ed2850113f5f3f487b1a70ee208c7d79e0")
                 .unwrap();

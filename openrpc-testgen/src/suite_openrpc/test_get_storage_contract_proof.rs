@@ -13,7 +13,7 @@ use crate::{
             },
             providers::provider::Provider,
         },
-        v8::types::{MerkleTreeMadara, ProofError},
+        v8::types::{MerkleTree, ProofError},
     },
     RandomizableAccountsTrait, RunnableTrait,
 };
@@ -145,7 +145,7 @@ impl RunnableTrait for TestCase {
             )
         );
 
-        let merkle_tree = MerkleTreeMadara::from_proof(
+        let merkle_tree = MerkleTree::from_proof(
             storage_proof.contracts_proof.nodes,
             Some(storage_proof.global_roots.contracts_tree_root),
         );
