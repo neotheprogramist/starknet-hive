@@ -112,6 +112,29 @@ impl StarknetHive {
         Ok(Self { account })
     }
 
+    pub async fn new_founding(
+        node_url: Url,
+        founding_account_address: Felt,
+        founding_private_key: Felt,
+    ) -> Result<Self, OpenRpcTestGenError> {
+        let provider = JsonRpcClient::new(HttpTransport::new(node_url.clone()));
+        let chain_id = get_chain_id(&provider).await?;
+        let founding_private_key = SigningKey::from_secret_scalar(founding_private_key);
+
+        let mut founding_account = SingleOwnerAccount::new(
+            provider.clone(),
+            LocalWallet::from(founding_private_key),
+            founding_account_address,
+            chain_id,
+            ExecutionEncoding::New,
+        );
+        founding_account.set_block_id(BlockId::Tag(BlockTag::Pending));
+
+        Ok(Self {
+            account: founding_account,
+        })
+    }
+
     pub async fn new_with_custom_account(
         node_url: Url,
         paymaster_account_address: Felt,
